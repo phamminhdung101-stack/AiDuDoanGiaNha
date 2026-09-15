@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — HouseAI{% endblock %}
+{% block body_class %}page-admin{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">⬡ HouseAI <span class="admin-badge">Admin</span></div>
+    <nav class="sidebar-nav">
+      <a href="/admin/dashboard" class="sidebar-link active">📊 Tổng quan</a>
+      <a href="/admin/train" class="sidebar-link">🤖 Huấn luyện AI</a>
+      <a href="/logout" class="sidebar-link sidebar-link--danger">🚪 Đăng xuất</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Tổng quan hệ thống</h1>
+      <div class="admin-topbar__right">
+        <span class="model-status {% if stats.accuracy != 'N/A' %}model-status--active{% else %}model-status--warn{% endif %}">
+          ● Model {% if stats.accuracy != 'N/A' %}Active{% else %}Chưa train{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-widget">
+        <div class="stat-widget__icon">🏠</div>
+        <div class="stat-widget__body">
+          <div class="stat-widget__val">{{ stats.total_houses }}</div>
+          <div class="stat-widget__label">Dữ liệu nhà</div>
+        </div>
+      </div>
+      <div class="stat-widget">
+        <div class="stat-widget__icon">📈</div>
+        <div class="stat-widget__body">
+          <div class="stat-widget__val">{{ stats.predictions }}</div>
+          <div class="stat-widget__label">Lượt dự đoán</div>
+        </div>
+      </div>
+      <div class="stat-widget">
+        <div class="stat-widget__icon">🎯</div>
+        <div class="stat-widget__body">
+          <div class="stat-widget__val">{{ stats.accuracy }}</div>
+          <div class="stat-widget__label">Độ chính xác (R²×100)</div>
+        </div>
+      </div>
+      <div class="stat-widget">
+        <div class="stat-widget__icon">👤</div>
+        <div class="stat-widget__body">
+          <div class="stat-widget__val">{{ stats.users }}</div>
+          <div class="stat-widget__label">Người dùng</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-grid-2">
+      <div class="admin-card">
+        <div class="admin-card__header">
+          <h2>Lượt dự đoán gần đây</h2>
+          <a href="/admin/houses/add" class="btn btn--primary btn--sm">+ Thêm nhà</a>
+        </div>
+        <table class="admin-table">
+          <thead>
+            <tr><th>Người dùng</th><th>Thành phố</th><th>Diện tích</th><th>Giá dự đoán</th><th>Thời gian</th></tr>
+          </thead>
+          <tbody>
+            {% for item in recent_preds %}
+            <tr>
+              <td>{{ item.username }}</td>
+              <td>{{ item.city or '—' }}</td>
+              <td>{{ item.area }} m²</td>
+              <td>
+                {% if item.pred_price %}
+                  {% if item.pred_price >= 1000000000 %}{{ "%.2f"|format(item.pred_price / 1000000000) }} tỷ
+                  {% elif item.pred_price >= 1000000 %}{{ "%.1f"|format(item.pred_price / 1000000) }} triệu
+                  {% else %}{{ "%.0f"|format(item.pred_price / 1000) }} nghìn{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ item.created_at }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="td-empty">Chưa có lượt dự đoán nào.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <a href="/admin/houses" class="admin-card__more">Xem dữ liệu nhà →</a>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card__header">
+          <h2>Thông tin mô hình AI</h2>
+        </div>
+        {% if model_report %}
+        <pre class="model-report-pre">{{ model_report }}</pre>
+        {% else %}
+        <div class="empty-hint">
+          <p>Mô hình chưa được huấn luyện.</p>
+          <a href="/admin/train" class="btn btn--primary btn--sm" style="margin-top:12px">🤖 Huấn luyện ngay</a>
+        </div>
+        {% endif %}
+        <div style="margin-top:16px;">
+          <a href="/admin/train" class="btn btn--primary btn--sm">🚀 Huấn luyện mới</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

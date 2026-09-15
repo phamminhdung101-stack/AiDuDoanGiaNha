@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}HouseAI{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+<nav class="navbar">
+  <a href="/" class="nav-logo">
+    <span class="logo-icon">⬡</span>
+    <span>House<strong>AI</strong></span>
+  </a>
+  <div class="nav-links">
+    {% if session.get('user_id') %}
+      <span class="nav-user">👤 {{ session.get('fullname', session.get('username')) }}</span>
+      <a href="/predict" class="nav-link {% if request.path == '/predict' %}active{% endif %}">Dự đoán</a>
+      <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}">Lịch sử</a>
+      <a href="/logout" class="nav-btn nav-btn--ghost">Đăng xuất</a>
+    {% elif session.get('admin') %}
+      <a href="/admin/dashboard" class="nav-link">Dashboard</a>
+      <a href="/logout" class="nav-btn nav-btn--ghost">Đăng xuất</a>
+    {% else %}
+      <a href="/login" class="nav-link">Đăng nhập</a>
+      <a href="/register" class="nav-btn">Đăng ký</a>
+    {% endif %}
+  </div>
+</nav>
+
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        <div class="flash flash--{{ cat }}" onclick="this.remove()">{{ msg }} <span class="flash-close">✕</span></div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Lịch sử dự đoán — HouseAI{% endblock %}
+{% block body_class %}page-history{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div class="page-header__tag">📋 Lịch sử</div>
+    <h1>Lịch sử dự đoán</h1>
+    <p>Tất cả các lần dự đoán giá nhà của bạn</p>
+  </div>
+
+  {% if history %}
+  <div class="history-table-wrap">
+    <div class="history-toolbar">
+      <input class="search-input" type="text" placeholder="🔍 Tìm kiếm theo địa chỉ, loại hình..." id="searchInput" oninput="filterHistory()"/>
+      <a href="/predict" class="btn btn--primary btn--sm">+ Dự đoán mới</a>
+    </div>
+
+    <table class="history-table" id="historyTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Địa chỉ</th>
+          <th>Diện tích</th>
+          <th>Loại hình</th>
+          <th>Giá dự đoán</th>
+          <th>Độ tin cậy</th>
+          <th>Thời gian</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in history %}
+        <tr>
+          <td class="td-num">{{ loop.index }}</td>
+          <td class="td-addr">
+            <span class="addr-main">{{ item.district or '' }}{% if item.district and item.city %}, {% endif %}{{ item.city or '' }}</span>
+            {% if item.street %}<span class="addr-sub">{{ item.street }}</span>{% endif %}
+          </td>
+          <td>{{ item.area }} m²</td>
+          <td><span class="tag-type">{{ item.house_type_label or item.house_type or '—' }}</span></td>
+          <td class="td-price">
+            {% if item.pred_price %}
+              {% if item.pred_price >= 1000000000 %}
+                {{ "%.2f"|format(item.pred_price / 1000000000) }} tỷ
+              {% elif item.pred_price >= 1000000 %}
+                {{ "%.1f"|format(item.pred_price / 1000000) }} triệu
+              {% else %}
+                {{ item.pred_price }} VNĐ
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <div class="conf-bar">
+              <div class="conf-bar__fill" style="width: {{ item.confidence }}%"></div>
+            </div>
+            <span class="conf-val">{{ item.confidence }}%</span>
+          </td>
+          <td class="td-date">{{ item.created_at }}</td>
+          <td>
+            <a href="/history/delete/{{ item.id }}" class="btn-icon btn-icon--danger"
+               onclick="return confirm('Xóa lịch sử này?')" title="Xóa">✕</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="history-footer">
+      Tổng: <strong>{{ history|length }}</strong> lượt dự đoán
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state__icon">📭</div>
+    <h3>Chưa có lịch sử dự đoán</h3>
+    <p>Bắt đầu dự đoán giá nhà đầu tiên của bạn</p>
+    <a href="/predict" class="btn btn--primary">Dự đoán ngay</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterHistory() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#historyTable tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

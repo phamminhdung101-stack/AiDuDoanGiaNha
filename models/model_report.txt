@@ -1,0 +1,26 @@
+==================================================
+  HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN
+==================================================
+Thời gian      : 2026-09-15 13:06:57
+Thuật toán     : gradient_boosting (residual model)
+Chế độ         : Giá bán
+n_estimators   : 200
+max_depth      : 5
+Test size      : 15%
+--------------------------------------------------
+BASELINE CURVE
+  slope        : -0.0521
+  intercept    : 18.6740
+  price ∝ area^0.948  (monotone tăng)
+--------------------------------------------------
+Dữ liệu gốc    : 2417 bản ghi
+Dữ liệu dùng   : 2417 bản ghi
+Tập train      : 2054 mẫu
+Tập test       : 363 mẫu
+--------------------------------------------------
+R2 (log)       : 0.7390
+Accuracy       : 73.9%
+MAE            : 4392.2 triệu VNĐ
+RMSE           : 11790.9 triệu VNĐ
+CV R2 (resid.) : 0.0864 ± 0.0174 (5-fold)
+==================================================

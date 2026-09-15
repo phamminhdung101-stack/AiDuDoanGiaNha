@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký — HouseAI{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-card__header">
+      <a href="/login" class="auth-back">← Đăng nhập</a>
+      <div class="auth-card__logo">⬡</div>
+      <h1>Tạo tài khoản</h1>
+      <p>Bắt đầu dự đoán giá nhà miễn phí</p>
+    </div>
+
+    <form class="auth-form" method="POST" action="/register">
+      <div class="form-group">
+        <label for="fullname">Họ và tên</label>
+        <input type="text" id="fullname" name="fullname" placeholder="Nguyễn Văn A" required/>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="example@email.com" required/>
+      </div>
+      <div class="form-group">
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" placeholder="username123" required/>
+      </div>
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required/>
+          <button type="button" class="toggle-pw" onclick="togglePw(this)">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="confirm_password">Xác nhận mật khẩu</label>
+        <input type="password" id="confirm_password" name="confirm_password" placeholder="Nhập lại mật khẩu" required/>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full">Tạo tài khoản</button>
+    </form>
+
+    <div class="auth-card__footer">
+      Đã có tài khoản? <a href="/login">Đăng nhập</a>
+    </div>
+  </div>
+
+  <div class="auth-visual">
+    <div class="auth-visual__inner">
+      <div class="av-stat">
+        <span class="av-stat__num">94.7%</span>
+        <span class="av-stat__lbl">Độ chính xác</span>
+      </div>
+      <div class="av-stat">
+        <span class="av-stat__num">2s</span>
+        <span class="av-stat__lbl">Thời gian dự đoán</span>
+      </div>
+      <div class="av-stat">
+        <span class="av-stat__num">12K+</span>
+        <span class="av-stat__lbl">Dữ liệu huấn luyện</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePw(btn) {
+  const inp = btn.previousElementSibling;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

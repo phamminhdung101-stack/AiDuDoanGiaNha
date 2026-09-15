@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập — HouseAI{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-card__header">
+      <a href="/" class="auth-back">← Trang chủ</a>
+      <div class="auth-card__logo">⬡</div>
+      <h1>Đăng nhập</h1>
+      <p>Chào mừng trở lại</p>
+    </div>
+
+    <form class="auth-form" method="POST" action="/login">
+      <div class="form-group">
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <div class="input-wrap">
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
+          <button type="button" class="toggle-pw" onclick="togglePw(this)">👁</button>
+        </div>
+      </div>
+
+      <div class="form-group form-group--row">
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_admin"/>
+          <span class="checkmark"></span>
+          Đăng nhập với tư cách Quản trị viên
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full">Đăng nhập</button>
+    </form>
+
+    <div class="auth-card__footer">
+      Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
+    </div>
+  </div>
+
+  <div class="auth-visual">
+    <div class="auth-visual__inner">
+      <div class="av-stat">
+        <span class="av-stat__num">45%+</span>
+        <span class="av-stat__lbl">R² Score (AI)</span>
+      </div>
+      <div class="av-stat">
+        <span class="av-stat__num">2s</span>
+        <span class="av-stat__lbl">Thời gian dự đoán</span>
+      </div>
+      <div class="av-stat">
+        <span class="av-stat__num">12K+</span>
+        <span class="av-stat__lbl">Dữ liệu huấn luyện</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePw(btn) {
+  const inp = btn.previousElementSibling;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

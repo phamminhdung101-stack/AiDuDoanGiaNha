@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Dự đoán giá nhà — HouseAI{% endblock %}
+{% block body_class %}page-predict{% endblock %}
+
+{% block content %}
+<div class="predict-wrap">
+  <div class="predict-form-col">
+    <div class="page-header">
+      <div class="page-header__tag">✦ AI Model</div>
+      <h1>Dự đoán giá nhà</h1>
+      <p>Nhập thông tin để nhận ước tính giá nhà chính xác</p>
+    </div>
+
+    <form class="predict-form" id="predictForm" method="POST" action="/predict">
+      <div class="form-section">
+        <div class="form-section__label">📍 Vị trí</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tỉnh / Thành phố <span class="req">*</span></label>
+            <select name="city" required>
+              <option value="">Chọn thành phố</option>
+              {% for c in ['Hồ Chí Minh','Hà Nội','Đà Nẵng','Cần Thơ','Bình Dương'] %}
+              <option value="{{ c }}" {% if form_data.get('city') == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Phường / Xã <span class="req">*</span></label>
+            <select name="ward" required data-selected="{{ form_data.get('ward', '') }}">
+              <option value="">Chọn phường/xã</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Đường / Phố <span class="field-hint">(tùy chọn)</span></label>
+          <input type="text" name="street" value="{{ form_data.get('street','') }}"
+            placeholder="Ví dụ: Nguyễn Văn Linh"/>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section__label">🏠 Thông số nhà</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Diện tích (m²) <span class="req">*</span></label>
+            <input type="number" name="area" value="{{ form_data.get('area','') }}"
+              placeholder="80" min="10" max="10000" step="0.1" required/>
+          </div>
+          <div class="form-group">
+            <label>Số tầng</label>
+            <input type="number" name="floors" value="{{ form_data.get('floors','') }}"
+              placeholder="3" min="1" max="50"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Số phòng ngủ <span class="req">*</span></label>
+            <input type="number" name="bedrooms" value="{{ form_data.get('bedrooms','') }}"
+              placeholder="3" min="0" max="20" required/>
+          </div>
+          <div class="form-group">
+            <label>Số phòng vệ sinh <span class="req">*</span></label>
+            <input type="number" name="bathrooms" value="{{ form_data.get('bathrooms','') }}"
+              placeholder="2" min="0" max="20" required/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section__label">✨ Loại hình</div>
+        <div class="form-group">
+          <div class="type-grid">
+            {% set ht = form_data.get('house_type','') %}
+            <label class="type-opt">
+              <input type="radio" name="house_type" value="nha_pho" {% if ht=='nha_pho' or not ht %}checked{% endif %}/>
+              <span>🏘 Nhà phố</span>
+            </label>
+            <label class="type-opt">
+              <input type="radio" name="house_type" value="biet_thu" {% if ht=='biet_thu' %}checked{% endif %}/>
+              <span>🏡 Biệt thự</span>
+            </label>
+            <label class="type-opt">
+              <input type="radio" name="house_type" value="chung_cu" {% if ht=='chung_cu' %}checked{% endif %}/>
+              <span>🏢 Chung cư</span>
+            </label>
+            <label class="type-opt">
+              <input type="radio" name="house_type" value="dat_nen" {% if ht=='dat_nen' %}checked{% endif %}/>
+              <span>🗺 Đất nền</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full btn--lg" id="predictBtn">
+        <span class="btn-text">🔍 Dự đoán giá ngay</span>
+        <span class="btn-loading" style="display:none">⟳ Đang phân tích...</span>
+      </button>
+    </form>
+  </div>
+
+  <div class="predict-result-col">
+    {% if error_msg %}
+    <div class="result-card result-card--error animate-in">
+      <div style="text-align:center;padding:32px;color:var(--red);">
+        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+        <h3>Không thể dự đoán</h3>
+        <p style="margin-top:8px;color:var(--text-2)">{{ error_msg }}</p>
+        <a href="/admin/train" style="margin-top:20px;display:inline-block" class="btn btn--outline btn--sm">Huấn luyện mô hình</a>
+      </div>
+    </div>
+
+    {% elif result %}
+    <div class="result-card animate-in">
+      <div class="result-card__header">
+        <span class="result-tag">✦ Kết quả dự đoán</span>
+        <span class="result-time">{{ result.timestamp }}</span>
+      </div>
+      <div class="result-price">
+        <div class="result-price__label">Giá ước tính</div>
+        <div class="result-price__val">
+          {% if result.price >= 1000000000 %}
+            {{ "%.2f"|format(result.price / 1000000000) }}
+          {% elif result.price >= 1000000 %}
+            {{ "%.2f"|format(result.price / 1000000) }}
+          {% elif result.price >= 1000 %}
+            {{ "%.0f"|format(result.price / 1000) }}
+          {% else %}
+            {{ result.price }}
+          {% endif %}
+        </div>
+        <div class="result-price__unit">
+          {% if result.price >= 1000000000 %}tỷ đồng
+          {% elif result.price >= 1000000 %}triệu đồng
+          {% elif result.price >= 1000 %}nghìn đồng
+          {% else %}VNĐ{% endif %}
+        </div>
+      </div>
+      <div class="result-range">
+        <div class="result-range__label">Khoảng giá tham khảo</div>
+        <div class="result-range__bar">
+          <div class="result-range__fill" style="left:15%;width:70%"></div>
+          <div class="result-range__marker"></div>
+        </div>
+        <div class="result-range__vals">
+          <span>
+            {% if result.min_price >= 1000000000 %}{{ "%.2f"|format(result.min_price / 1000000000) }} tỷ
+            {% elif result.min_price >= 1000000 %}{{ "%.1f"|format(result.min_price / 1000000) }} triệu
+            {% else %}{{ "%.0f"|format(result.min_price / 1000) }} nghìn{% endif %}
+          </span>
+          <span>
+            {% if result.max_price >= 1000000000 %}{{ "%.2f"|format(result.max_price / 1000000000) }} tỷ
+            {% elif result.max_price >= 1000000 %}{{ "%.1f"|format(result.max_price / 1000000) }} triệu
+            {% else %}{{ "%.0f"|format(result.max_price / 1000) }} nghìn{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="result-meta">
+        <div class="result-meta__item">
+          <span class="result-meta__label">Độ tin cậy</span>
+          <span class="result-meta__val confidence">{{ result.confidence }}%</span>
+        </div>
+        <div class="result-meta__item">
+          <span class="result-meta__label">Mô hình</span>
+          <span class="result-meta__val">{{ result.algorithm }}</span>
+        </div>
+      </div>
+      <div class="result-actions">
+        <a href="/history" class="btn btn--outline btn--sm">📋 Xem lịch sử</a>
+        <button onclick="window.print()" class="btn btn--ghost btn--sm">🖨 In kết quả</button>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="result-placeholder">
+      <div class="result-placeholder__icon">
+        <svg viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <path d="M40 20 L55 35 L55 58 L25 58 L25 35 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+          <path d="M32 58 L32 45 L48 45 L48 58" stroke="currentColor" stroke-width="2"/>
+          <circle cx="40" cy="51" r="1.5" fill="currentColor"/>
+        </svg>
+      </div>
+      <h3>Kết quả sẽ hiển thị tại đây</h3>
+      <p>Điền đầy đủ thông tin nhà và nhấn <strong>Dự đoán giá ngay</strong></p>
+    </div>
+    {% endif %}
+
+    <div class="tip-card">
+      <div class="tip-card__title">💡 Mẹo để có kết quả chính xác</div>
+      <ul>
+        <li>Nhập diện tích thực tế (không phải diện tích sàn)</li>
+        <li>Chọn đúng quận/huyện nơi bất động sản tọa lạc</li>
+        <li>Nhập đúng số phòng ngủ và phòng vệ sinh</li>
+        <li>Chọn đúng loại hình bất động sản</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('predictForm').addEventListener('submit', function() {
+  document.querySelector('.btn-text').style.display = 'none';
+  document.querySelector('.btn-loading').style.display = 'inline';
+  document.getElementById('predictBtn').disabled = true;
+});
+
+const WARDS = {
+  'Hồ Chí Minh': [
+    "Phường 1", "Phường 10", "Phường 11", "Phường 12", "Phường 13", "Phường 14", "Phường 15", "Phường 16", "Phường 17", "Phường 18", "Phường 19", "Phường 2", "Phường 21", "Phường 22", "Phường 24", "Phường 25", "Phường 26", "Phường 27", "Phường 28", "Phường 3", "Phường 4", "Phường 5", "Phường 6", "Phường 7", "Phường 8", "Phường 9", "Phường An Khánh (Quận 2 cũ)", "Phường An Lạc", "Phường An Lạc A", "Phường An Lợi Đông (Quận 2 cũ)", "Phường An Phú (Quận 2 cũ)", "Phường An Phú Đông", "Phường Bình Chiểu (Quận Thủ Đức cũ)", "Phường Bình Hưng Hoà A", "Phường Bình Hưng Hoà B", "Phường Bình Hưng Hòa", "Phường Bình Thuận", "Phường Bình Thọ (Quận Thủ Đức cũ)", "Phường Bình Trưng Tây (Quận 2 cũ)", "Phường Bình Trưng Đông (Quận 2 cũ)", "Phường Bình Trị Đông", "Phường Bình Trị Đông A", "Phường Bình Trị Đông B", "Phường Bến Nghé", "Phường Bến Thành", "Phường Cát Lái (Quận 2 cũ)", "Phường Cô Giang", "Phường Cầu Kho", "Phường Cầu Ông Lãnh", "Phường Hiệp Bình Chánh (Quận Thủ Đức cũ)", "Phường Hiệp Bình Phước (Quận Thủ Đức cũ)", "Phường Hiệp Phú (Quận 9 cũ)", "Phường Hiệp Thành", "Phường Hiệp Tân", "Phường Hòa Thạnh", "Phường Linh Chiểu (Quận Thủ Đức cũ)", "Phường Linh Trung (Quận Thủ Đức cũ)", "Phường Linh Tây (Quận Thủ Đức cũ)", "Phường Linh Xuân (Quận Thủ Đức cũ)", "Phường Linh Đông (Quận Thủ Đức cũ)", "Phường Long Bình (Quận 9 cũ)", "Phường Long Phước (Quận 9 cũ)", "Phường Long Thạnh Mỹ (Quận 9 cũ)", "Phường Long Trường (Quận 9 cũ)", "Phường Nguyễn Cư Trinh", "Phường Nguyễn Thái Bình", "Phường Phú Hữu (Quận 9 cũ)", "Phường Phú Mỹ", "Phường Phú Thuận", "Phường Phú Thạnh", "Phường Phú Thọ Hòa", "Phường Phú Trung", "Phường Phước Bình (Quận 9 cũ)", "Phường Phước Long A (Quận 9 cũ)", "Phường Phước Long B (Quận 9 cũ)", "Phường Phạm Ngũ Lão", "Phường Sơn Kỳ", "Phường Tam Bình (Quận Thủ Đức cũ)", "Phường Tam Phú (Quận Thủ Đức cũ)", "Phường Thạnh Lộc", "Phường Thạnh Mỹ Lợi (Quận 2 cũ)", "Phường Thạnh Xuân", "Phường Thảo Điền (Quận 2 cũ)", "Phường Thới An", "Phường Trung Mỹ Tây", "Phường Trường Thạnh (Quận 9 cũ)", "Phường Trường Thọ (Quận Thủ Đức cũ)", "Phường Tân Chánh Hiệp", "Phường Tân Hưng", "Phường Tân Hưng Thuận", "Phường Tân Kiểng", "Phường Tân Phong", "Phường Tân Phú", "Phường Tân Phú (Quận 9 cũ)", "Phường Tân Quy", "Phường Tân Quý", "Phường Tân Sơn Nhì", "Phường Tân Thuận Tây", "Phường Tân Thuận Đông", "Phường Tân Thành", "Phường Tân Thới Hiệp", "Phường Tân Thới Hòa", "Phường Tân Thới Nhất", "Phường Tân Tạo", "Phường Tân Tạo A", "Phường Tân Định", "Phường Tây Thạnh", "Phường Tăng Nhơn Phú A (Quận 9 cũ)", "Phường Tăng Nhơn Phú B (Quận 9 cũ)", "Phường Võ Thị Sáu", "Phường Đa Kao", "Phường Đông Hưng Thuận", "Thị trấn Cần Thạnh", "Thị trấn Củ Chi", "Thị trấn Hóc Môn", "Thị trấn Nhà Bè", "Thị trấn Tân Túc", "Xã An Nhơn Tây", "Xã An Phú", "Xã Bà Điểm", "Xã Bình Chánh", "Xã Bình Hưng", "Xã Bình Lợi", "Xã Bình Mỹ", "Xã Long Hòa", "Xã Lê Minh Xuân", "Xã Nhơn Đức", "Xã Phong Phú", "Xã Phú Xuân", "Xã Phước Hiệp", "Xã Phước Kiển", "Xã Phước Lộc", "Xã Phước Thạnh", "Xã Phước Vĩnh An", "Xã Phạm Văn Cội", "Xã Phạm Văn Hai", "Xã Quy Đức", "Xã Thái Mỹ", "Xã Thới Tam Thôn", "Xã Trung An", "Xã Trung Chánh", "Xã Trung Lập Thượng", "Xã Tân An Hội", "Xã Tân Hiệp", "Xã Tân Nhựt", "Xã Tân Phú Trung", "Xã Tân Thông Hội", "Xã Tân Xuân", "Xã Vĩnh Lộc A", "Xã Vĩnh Lộc B", "Xã Xuân Thới Sơn", "Xã Xuân Thới Thượng", "Xã Xuân Thới Đông", "Xã Đa Phước", "Xã Đông Thạnh"
+  ]
+};
+
+const citySel   = document.querySelector('[name="city"]');
+const wardSel   = document.querySelector('[name="ward"]');
+const savedWard = wardSel.dataset.selected || '';
+
+function loadWards(city, selected) {
+  wardSel.innerHTML = '<option value="">Chọn phường/xã</option>';
+  (WARDS[city] || []).forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (d === selected) opt.selected = true;
+    wardSel.appendChild(opt);
+  });
+}
+
+citySel.addEventListener('change', () => loadWards(citySel.value, ''));
+if (citySel.value) loadWards(citySel.value, savedWard);
+</script>
+{% endblock %}
