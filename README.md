@@ -1,10 +1,10 @@
-# 🏠 HouseAI — Dự đoán giá nhà bằng AI
+HouseAI — Dự đoán giá nhà bằng AI
 
 Ứng dụng web dự đoán giá bất động sản sử dụng Machine Learning (Gradient Boosting), Flask và MySQL.
 
 ---
 
-## 📁 Cấu trúc dự án
+Cấu trúc dự án
 
 ```
 HousePriceAI_Final/
@@ -47,7 +47,7 @@ HousePriceAI_Final/
 
 ---
 
-## ⚙️ Yêu cầu hệ thống
+Yêu cầu hệ thống
 
 - Python 3.10+
 - MySQL 8.0+ (hoặc MariaDB 10.5+)
@@ -55,15 +55,15 @@ HousePriceAI_Final/
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & chạy
+Hướng dẫn cài đặt & chạy
 
-### Bước 1 — Cài thư viện Python
+Bước 1 — Cài thư viện Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Bước 2 — Tạo database MySQL (không cần quan tâm)
+Bước 2 — Tạo database MySQL (không cần quan tâm)
 
 Mở MySQL Workbench hoặc terminal, chạy:
 
@@ -94,7 +94,7 @@ Mở trình duyệt: **http://localhost:5000**
 
 ---
 
-## 👤 Tài khoản mặc định
+Tài khoản mặc định
 
 | Vai trò       | Tên đăng nhập | Mật khẩu   |
 |---------------|--------------|------------|
@@ -105,22 +105,22 @@ Mở trình duyệt: **http://localhost:5000**
 
 ---
 
-## 📊 Tính năng
+Tính năng
 
 ### Người dùng (User)
-- ✅ Đăng ký / Đăng nhập / Đăng xuất
-- ✅ Dự đoán giá nhà (nhập thành phố, quận, diện tích, số phòng...)
-- ✅ Xem kết quả: giá ước tính, khoảng giá, độ tin cậy
-- ✅ Xem lịch sử dự đoán, xóa từng mục
+- Đăng ký / Đăng nhập / Đăng xuất
+- Dự đoán giá nhà (nhập thành phố, quận, diện tích, số phòng...)
+- Xem kết quả: giá ước tính, khoảng giá, độ tin cậy
+- Xem lịch sử dự đoán, xóa từng mục
 
-### Quản trị viên (Admin)
-- ✅ Dashboard: thống kê tổng quan, lượt dự đoán gần đây
-- ✅ Quản lý dữ liệu nhà: Thêm / Sửa / Xóa / Tìm kiếm
-- ✅ Huấn luyện model AI: chọn thuật toán, thông số, xem kết quả R²
+Quản trị viên (Admin)
+- Dashboard: thống kê tổng quan, lượt dự đoán gần đây
+- Quản lý dữ liệu nhà: Thêm / Sửa / Xóa / Tìm kiếm
+- Huấn luyện model AI: chọn thuật toán, thông số, xem kết quả R²
 
 ---
 
-## 🤖 Model AI
+Model AI
 
 - **Thuật toán mặc định:** Gradient Boosting (scikit-learn)
 - **Features:** Diện tích, Thành phố, Quận/Phường, Số phòng ngủ, Số WC
@@ -131,7 +131,7 @@ Mở trình duyệt: **http://localhost:5000**
 
 ---
 
-## 🛠️ Cấu hình MySQL
+Cấu hình MySQL
 
 Sửa trong `backend/connect_db.py`:
 
