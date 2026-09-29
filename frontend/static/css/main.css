@@ -393,3 +393,6 @@ select { appearance: none; background-image: url("data:image/svg+xml;charset=US-
 
 /* FIELD HINT */
 .field-hint { color: var(--text-3); font-weight: normal; font-size: 12px; }
+
+/* FIXED INPUT WRAP */
+.input-wrap { position: relative; display: flex; width: 100%; align-items: center; }
