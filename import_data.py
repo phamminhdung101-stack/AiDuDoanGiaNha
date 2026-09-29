@@ -8,10 +8,9 @@ def run():
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT COUNT(*) FROM houses")
-    if cursor.fetchone()[0] > 0:
-        print("Data already exists. Skipping import.")
-        return
+    print("Clearing existing houses data...")
+    cursor.execute("DELETE FROM houses")
+    conn.commit()
         
     print(f"Importing {len(df)} rows into houses table...")
     sql = """

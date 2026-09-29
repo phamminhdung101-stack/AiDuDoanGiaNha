@@ -15,6 +15,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
@@ -49,19 +50,40 @@ def load_dataset() -> pd.DataFrame:
 
 def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
     df = df.copy()
+    
+    # 1. Remove duplicates
+    df = df.drop_duplicates()
+    
+    # 2. Convert types and drop missing critical values
     df["price"] = pd.to_numeric(df["price"], errors="coerce")
     df["area"]  = pd.to_numeric(df["area"],  errors="coerce")
     df = df.dropna(subset=["price", "area"])
     df = df[(df["price"] > 0) & (df["area"] > 0)]
 
-    # Không lọc dữ liệu theo yêu cầu để sử dụng trọn bộ dữ liệu gốc
+    # 3. Create price_per_m2 feature
+    df["price_per_m2"] = df["price"] / df["area"]
 
-    # Fill missing
-    for col in ["rooms", "toilets"]:
-        df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
+    # 4. Outlier removal using IQR
+    Q1_ppm = df['price_per_m2'].quantile(0.25)
+    Q3_ppm = df['price_per_m2'].quantile(0.75)
+    IQR_ppm = Q3_ppm - Q1_ppm
+    df = df[(df['price_per_m2'] >= Q1_ppm - 1.5 * IQR_ppm) & 
+            (df['price_per_m2'] <= Q3_ppm + 1.5 * IQR_ppm)]
+            
+    Q1_area = df['area'].quantile(0.25)
+    Q3_area = df['area'].quantile(0.75)
+    IQR_area = Q3_area - Q1_area
+    df = df[(df['area'] >= Q1_area - 1.5 * IQR_area) & 
+            (df['area'] <= Q3_area + 1.5 * IQR_area)]
+
+    # 5. Missing categorical values
     for col in CATEGORICAL_FEATS:
         df[col] = df[col].fillna("unknown").astype(str).str.strip()
         df.loc[df[col] == "", col] = "unknown"
+        
+    # Note: Numeric missing values (rooms, toilets) will be handled by SimpleImputer in the pipeline.
+    for col in ["rooms", "toilets"]:
+        df[col] = pd.to_numeric(df.get(col, np.nan), errors="coerce")
 
     return df
 
@@ -128,9 +150,14 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         X, y, test_size=test_size, random_state=42
     )
 
+    num_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler())
+    ])
+
     preprocessor = ColumnTransformer([
         ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CATEGORICAL_FEATS),
-        ("num", StandardScaler(), NUMERIC_FEATS),
+        ("num", num_pipeline, NUMERIC_FEATS),
     ])
     estimator = get_estimator(algorithm, n_estimators, max_depth)
     pipeline  = Pipeline([("preprocessor", preprocessor), ("model", estimator)])
