@@ -4,21 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}HouseAI{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
   {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
 
 <nav class="navbar">
   <a href="/" class="nav-logo">
-    <span class="logo-icon">⬡</span>
-    <span>House<strong>AI</strong></span>
+    <i class="ph-fill ph-hexagon logo-icon"></i>
+    <span>HouseAI</span>
   </a>
   <div class="nav-links">
     {% if session.get('user_id') %}
-      <span class="nav-user">👤 {{ session.get('fullname', session.get('username')) }}</span>
+      <span class="nav-user"><i class="ph ph-user-circle"></i> {{ session.get('fullname', session.get('username')) }}</span>
       <a href="/predict" class="nav-link {% if request.path == '/predict' %}active{% endif %}">Dự đoán</a>
       <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}">Lịch sử</a>
       <a href="/logout" class="nav-btn nav-btn--ghost">Đăng xuất</a>
@@ -36,7 +36,17 @@
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for cat, msg in messages %}
-        <div class="flash flash--{{ cat }}" onclick="this.remove()">{{ msg }} <span class="flash-close">✕</span></div>
+        <div class="flash flash--{{ cat }}" onclick="this.remove()">
+          {% if cat == 'success' %}
+            <i class="ph-fill ph-check-circle flash-icon"></i>
+          {% elif cat == 'error' %}
+            <i class="ph-fill ph-warning-circle flash-icon"></i>
+          {% else %}
+            <i class="ph-fill ph-info flash-icon"></i>
+          {% endif %}
+          <span>{{ msg }}</span>
+          <i class="ph ph-x flash-close"></i>
+        </div>
       {% endfor %}
     {% endif %}
   {% endwith %}

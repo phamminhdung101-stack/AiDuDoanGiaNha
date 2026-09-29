@@ -68,3 +68,6 @@ CREATE TABLE IF NOT EXISTS predictions (
 
 -- Default admin (password: admin123 — đổi ngay trong production!)
 INSERT IGNORE INTO admins (username, password) VALUES ('admin', 'admin123');
+
+select *from predictions;
+TRUNCATE TABLE houses;

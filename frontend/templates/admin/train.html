@@ -5,30 +5,31 @@
 {% block content %}
 <div class="admin-layout">
   <aside class="admin-sidebar">
-    <div class="sidebar-logo">⬡ HouseAI <span class="admin-badge">Admin</span></div>
+    <div class="sidebar-logo">
+      <i class="ph-fill ph-hexagon logo-icon"></i> HouseAI <span class="admin-badge">Admin</span>
+    </div>
     <nav class="sidebar-nav">
-      <a href="/admin/dashboard" class="sidebar-link">📊 Tổng quan</a>
-      <a href="/admin/train" class="sidebar-link active">🤖 Huấn luyện AI</a>
-      
-      <a href="/logout" class="sidebar-link sidebar-link--danger">🚪 Đăng xuất</a>
+      <a href="/admin/dashboard" class="sidebar-link"><i class="ph ph-squares-four"></i> Tổng quan</a>
+      <a href="/admin/houses" class="sidebar-link"><i class="ph ph-house"></i> Dữ liệu nhà</a>
+      <a href="/admin/train" class="sidebar-link active"><i class="ph ph-brain"></i> Huấn luyện AI</a>
+      <a href="/logout" class="sidebar-link sidebar-link--danger"><i class="ph ph-sign-out"></i> Đăng xuất</a>
     </nav>
   </aside>
 
   <div class="admin-main">
     <div class="admin-topbar">
       <h1>Huấn luyện mô hình AI</h1>
-      <span class="model-status model-status--active">● Model Active</span>
+      <span class="model-status model-status--active">Model Active</span>
     </div>
 
     <div class="admin-grid-2">
       <div class="admin-card">
-        <div class="admin-card__header"><h2>Cấu hình huấn luyện</h2></div>
+        <div class="admin-card__header"><h2><i class="ph ph-sliders-horizontal"></i> Cấu hình huấn luyện</h2></div>
         <form method="POST" action="/admin/train" id="trainForm">
           <div class="form-group">
             <label>Chế độ dữ liệu</label>
             <select name="mode">
               <option value="sale">Giá bán (≥ 100 triệu) — Mặc định</option>
-             
             </select>
           </div>
           <div class="form-group">
@@ -41,29 +42,32 @@
           </div>
           <div class="form-group">
             <label>Tỷ lệ tập test (%)</label>
-            <input type="range" name="test_size" min="10" max="40" value="20"
-              oninput="document.getElementById('testSizeVal').textContent=this.value+'%'"/>
-            <span id="testSizeVal">20%</span>
+            <div style="display:flex;align-items:center;gap:12px">
+              <input type="range" name="test_size" min="10" max="40" value="20" style="flex:1" oninput="document.getElementById('testSizeVal').textContent=this.value+'%'"/>
+              <span id="testSizeVal" style="font-weight:600;min-width:40px;text-align:right">20%</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Số cây (n_estimators)</label>
-            <input type="number" name="n_estimators" value="200" min="10" max="500"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Số cây (n_estimators)</label>
+              <input type="number" name="n_estimators" value="200" min="10" max="500"/>
+            </div>
+            <div class="form-group">
+              <label>Độ sâu (max_depth)</label>
+              <input type="number" name="max_depth" value="5" min="1" max="20"/>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Độ sâu tối đa (max_depth)</label>
-            <input type="number" name="max_depth" value="5" min="1" max="20"/>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn--primary btn--full" id="trainBtn">
-              <span class="btn-text">🚀 Bắt đầu huấn luyện</span>
-              <span class="btn-loading" style="display:none">⟳ Đang huấn luyện...</span>
+          <div class="form-actions" style="margin-top:24px">
+            <button type="submit" class="btn btn--primary btn--full btn--lg" id="trainBtn">
+              <span class="btn-text"><i class="ph ph-rocket-launch"></i> Bắt đầu huấn luyện</span>
+              <span class="btn-loading"><i class="ph ph-spinner"></i> Đang huấn luyện...</span>
             </button>
           </div>
         </form>
       </div>
 
       <div class="admin-card">
-        <div class="admin-card__header"><h2>Thông tin dữ liệu</h2></div>
+        <div class="admin-card__header"><h2><i class="ph ph-database"></i> Thông tin dữ liệu</h2></div>
         <div class="train-data-info">
           <div class="train-status__item">
             <span class="train-label">Tổng bản ghi</span>
@@ -71,28 +75,26 @@
           </div>
           <div class="train-status__item">
             <span class="train-label">Bản ghi hợp lệ</span>
-            <span class="train-val">{{ train_data.valid }}</span>
+            <span class="train-val" style="color:var(--green)">{{ train_data.valid }}</span>
           </div>
           <div class="train-status__item">
             <span class="train-label">Bản ghi lỗi</span>
             <span class="train-val" style="color:var(--red)">{{ train_data.invalid }}</span>
           </div>
-          <div class="train-status__item">
+          <div class="train-status__item" style="border:none">
             <span class="train-label">Cập nhật lần cuối</span>
             <span class="train-val">{{ train_data.last_updated }}</span>
           </div>
         </div>
 
         {% if train_results %}
-        <div class="train-result-block" style="margin-top:20px;padding:16px;background:var(--bg);border-radius:12px;border:1px solid var(--green);">
-          <div style="color:var(--green);font-weight:600;margin-bottom:12px;">✅ Kết quả huấn luyện</div>
+        <div style="margin-top:24px;padding:20px;background:var(--green-glow);border-radius:var(--radius);border:1px solid var(--green);">
+          <div style="color:var(--green);font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+            <i class="ph-fill ph-check-circle"></i> Kết quả huấn luyện
+          </div>
           <div class="train-status__item">
             <span class="train-label">Thuật toán</span>
             <span class="train-val">{{ train_results.algorithm }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Chế độ</span>
-            <span class="train-val">{{ train_results.mode }}</span>
           </div>
           <div class="train-status__item">
             <span class="train-label">R² Score</span>
@@ -103,22 +105,10 @@
             <span class="train-val" style="color:var(--green)">{{ train_results.accuracy }}%</span>
           </div>
           <div class="train-status__item">
-            <span class="train-label">Cross-Val R²</span>
-            <span class="train-val">{{ train_results.cv_r2 }} ± {{ train_results.cv_std }}</span>
-          </div>
-          <div class="train-status__item">
             <span class="train-label">MAE</span>
             <span class="train-val">{{ "{:,.0f}".format(train_results.mae) }} VNĐ</span>
           </div>
-          <div class="train-status__item">
-            <span class="train-label">RMSE</span>
-            <span class="train-val">{{ "{:,.0f}".format(train_results.rmse) }} VNĐ</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Tập train / test</span>
-            <span class="train-val">{{ train_results.train_rows }} / {{ train_results.test_rows }} mẫu</span>
-          </div>
-          <div class="train-status__item">
+          <div class="train-status__item" style="border:none;padding-bottom:0">
             <span class="train-label">Thời gian train</span>
             <span class="train-val">{{ train_results.trained_at }}</span>
           </div>
@@ -126,9 +116,9 @@
         {% endif %}
 
         {% if model_report and not train_results %}
-        <div style="margin-top:16px;">
-          <div style="color:var(--text-2);font-size:13px;margin-bottom:8px;">Báo cáo mô hình hiện tại:</div>
-          <pre style="font-size:11px;overflow:auto;max-height:250px;background:var(--bg);padding:12px;border-radius:8px;color:var(--text-2)">{{ model_report }}</pre>
+        <div style="margin-top:24px;">
+          <div style="color:var(--text-2);font-size:13px;font-weight:600;margin-bottom:8px;">Báo cáo mô hình hiện tại:</div>
+          <pre class="model-report-pre">{{ model_report }}</pre>
         </div>
         {% endif %}
       </div>
@@ -141,7 +131,7 @@
 <script>
 document.getElementById('trainForm').addEventListener('submit', function() {
   document.querySelector('.btn-text').style.display = 'none';
-  document.querySelector('.btn-loading').style.display = 'inline';
+  document.querySelector('.btn-loading').style.display = 'inline-flex';
   document.getElementById('trainBtn').disabled = true;
 });
 </script>

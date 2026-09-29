@@ -4,46 +4,18 @@
 
 {% block content %}
 <section class="hero">
-  <div class="hero__bg">
-    <div class="blob blob--1"></div>
-    <div class="blob blob--2"></div>
-    <div class="grid-lines"></div>
-  </div>
   <div class="hero__content">
-    <div class="hero__badge">✦ Công nghệ AI tiên tiến</div>
+    <div class="hero__badge"><i class="ph-fill ph-sparkle"></i> Công nghệ AI tiên tiến</div>
     <h1 class="hero__title">
-      Dự đoán<br>
-      <em>giá nhà</em><br>
-      chính xác
+      Dự đoán <em>giá nhà</em><br>
+      nhanh chóng & chính xác
     </h1>
     <p class="hero__sub">
-      Hệ thống AI phân tích hàng nghìn dữ liệu bất động sản,<br>
-      đưa ra ước tính giá nhà chính xác trong vài giây.
+      Hệ thống trí tuệ nhân tạo phân tích hàng nghìn dữ liệu bất động sản thực tế, đưa ra ước tính giá nhà chính xác và khách quan chỉ trong vài giây.
     </p>
     <div class="hero__actions">
-      <a href="/predict" class="btn btn--primary btn--lg">Dự đoán ngay <span>→</span></a>
+      <a href="/predict" class="btn btn--primary btn--lg">Dự đoán ngay <i class="ph ph-arrow-right"></i></a>
       <a href="/register" class="btn btn--outline btn--lg">Tạo tài khoản</a>
-    </div>
-  </div>
-  <div class="hero__visual">
-    <div class="stat-card stat-card--1">
-      <div class="stat-card__val">{{ model_accuracy }}%</div>
-      <div class="stat-card__label">Độ chính xác</div>
-    </div>
-    <div class="stat-card stat-card--2">
-      <div class="stat-card__val">12K+</div>
-      <div class="stat-card__label">Dữ liệu nhà</div>
-    </div>
-    <div class="house-icon">
-      <svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M60 10 L110 50 L110 95 L10 95 L10 50 Z" stroke="currentColor" stroke-width="3" fill="none"/>
-        <path d="M60 10 L110 50" stroke="currentColor" stroke-width="3"/>
-        <path d="M60 10 L10 50" stroke="currentColor" stroke-width="3"/>
-        <rect x="45" y="60" width="30" height="35" stroke="currentColor" stroke-width="2.5" fill="none"/>
-        <rect x="20" y="55" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"/>
-        <rect x="80" y="55" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"/>
-        <circle cx="60" cy="77" r="2" fill="currentColor"/>
-      </svg>
     </div>
   </div>
 </section>
@@ -53,19 +25,19 @@
     <h2 class="section-title">Tại sao chọn HouseAI?</h2>
     <div class="features__grid">
       <div class="feature-card">
-        <div class="feature-card__icon">◈</div>
-        <h3>Mô hình ML tiên tiến</h3>
-        <p>Sử dụng thuật toán học máy được huấn luyện trên dữ liệu thực tế từ thị trường bất động sản Việt Nam.</p>
+        <div class="feature-card__icon"><i class="ph ph-brain"></i></div>
+        <h3>Mô hình AI tiên tiến</h3>
+        <p>Sử dụng thuật toán học máy được huấn luyện liên tục trên dữ liệu thực tế từ thị trường bất động sản Việt Nam.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-card__icon">◎</div>
+        <div class="feature-card__icon"><i class="ph ph-lightning"></i></div>
         <h3>Kết quả tức thì</h3>
-        <p>Nhập thông tin nhà, nhận ước tính giá chỉ trong vài giây với khoảng tin cậy rõ ràng.</p>
+        <p>Nhập thông tin nhà, nhận ước tính giá trị và khoảng giá giao dịch an toàn chỉ trong vài giây.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-card__icon">◉</div>
-        <h3>Lưu lịch sử</h3>
-        <p>Tra cứu lại tất cả các lần dự đoán, so sánh và theo dõi biến động giá theo thời gian.</p>
+        <div class="feature-card__icon"><i class="ph ph-clock-counter-clockwise"></i></div>
+        <h3>Quản lý lịch sử</h3>
+        <p>Lưu trữ và tra cứu lại tất cả các lần dự đoán, so sánh và theo dõi biến động giá tài sản theo thời gian.</p>
       </div>
     </div>
   </div>

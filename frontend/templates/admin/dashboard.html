@@ -5,48 +5,49 @@
 {% block content %}
 <div class="admin-layout">
   <aside class="admin-sidebar">
-    <div class="sidebar-logo">⬡ HouseAI <span class="admin-badge">Admin</span></div>
+    <div class="sidebar-logo">
+      <i class="ph-fill ph-hexagon logo-icon"></i> HouseAI <span class="admin-badge">Admin</span>
+    </div>
     <nav class="sidebar-nav">
-      <a href="/admin/dashboard" class="sidebar-link active">📊 Tổng quan</a>
-      <a href="/admin/train" class="sidebar-link">🤖 Huấn luyện AI</a>
-      <a href="/logout" class="sidebar-link sidebar-link--danger">🚪 Đăng xuất</a>
+      <a href="/admin/dashboard" class="sidebar-link active"><i class="ph ph-squares-four"></i> Tổng quan</a>
+      <a href="/admin/houses" class="sidebar-link"><i class="ph ph-house"></i> Dữ liệu nhà</a>
+      <a href="/admin/train" class="sidebar-link"><i class="ph ph-brain"></i> Huấn luyện AI</a>
+      <a href="/logout" class="sidebar-link sidebar-link--danger"><i class="ph ph-sign-out"></i> Đăng xuất</a>
     </nav>
   </aside>
 
   <div class="admin-main">
     <div class="admin-topbar">
       <h1>Tổng quan hệ thống</h1>
-      <div class="admin-topbar__right">
-        <span class="model-status {% if stats.accuracy != 'N/A' %}model-status--active{% else %}model-status--warn{% endif %}">
-          ● Model {% if stats.accuracy != 'N/A' %}Active{% else %}Chưa train{% endif %}
-        </span>
-      </div>
+      <span class="model-status {% if stats.accuracy != 'N/A' %}model-status--active{% else %}model-status--warn{% endif %}">
+        {% if stats.accuracy != 'N/A' %}Model Đang Hoạt Động{% else %}Chưa Huấn Luyện{% endif %}
+      </span>
     </div>
 
     <div class="stats-grid">
       <div class="stat-widget">
-        <div class="stat-widget__icon">🏠</div>
+        <div class="stat-widget__icon"><i class="ph ph-database"></i></div>
         <div class="stat-widget__body">
           <div class="stat-widget__val">{{ stats.total_houses }}</div>
           <div class="stat-widget__label">Dữ liệu nhà</div>
         </div>
       </div>
       <div class="stat-widget">
-        <div class="stat-widget__icon">📈</div>
+        <div class="stat-widget__icon"><i class="ph ph-chart-line-up"></i></div>
         <div class="stat-widget__body">
           <div class="stat-widget__val">{{ stats.predictions }}</div>
           <div class="stat-widget__label">Lượt dự đoán</div>
         </div>
       </div>
       <div class="stat-widget">
-        <div class="stat-widget__icon">🎯</div>
+        <div class="stat-widget__icon"><i class="ph ph-crosshair"></i></div>
         <div class="stat-widget__body">
           <div class="stat-widget__val">{{ stats.accuracy }}</div>
           <div class="stat-widget__label">Độ chính xác (R²×100)</div>
         </div>
       </div>
       <div class="stat-widget">
-        <div class="stat-widget__icon">👤</div>
+        <div class="stat-widget__icon"><i class="ph ph-users"></i></div>
         <div class="stat-widget__body">
           <div class="stat-widget__val">{{ stats.users }}</div>
           <div class="stat-widget__label">Người dùng</div>
@@ -58,33 +59,35 @@
       <div class="admin-card">
         <div class="admin-card__header">
           <h2>Lượt dự đoán gần đây</h2>
-          <a href="/admin/houses/add" class="btn btn--primary btn--sm">+ Thêm nhà</a>
+          <a href="/admin/houses/add" class="btn btn--outline btn--sm"><i class="ph ph-plus"></i> Thêm nhà</a>
         </div>
-        <table class="admin-table">
-          <thead>
-            <tr><th>Người dùng</th><th>Thành phố</th><th>Diện tích</th><th>Giá dự đoán</th><th>Thời gian</th></tr>
-          </thead>
-          <tbody>
-            {% for item in recent_preds %}
-            <tr>
-              <td>{{ item.username }}</td>
-              <td>{{ item.city or '—' }}</td>
-              <td>{{ item.area }} m²</td>
-              <td>
-                {% if item.pred_price %}
-                  {% if item.pred_price >= 1000000000 %}{{ "%.2f"|format(item.pred_price / 1000000000) }} tỷ
-                  {% elif item.pred_price >= 1000000 %}{{ "%.1f"|format(item.pred_price / 1000000) }} triệu
-                  {% else %}{{ "%.0f"|format(item.pred_price / 1000) }} nghìn{% endif %}
-                {% else %}—{% endif %}
-              </td>
-              <td>{{ item.created_at }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5" class="td-empty">Chưa có lượt dự đoán nào.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <a href="/admin/houses" class="admin-card__more">Xem dữ liệu nhà →</a>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Người dùng</th><th>Thành phố</th><th>Diện tích</th><th>Giá dự đoán</th><th>Thời gian</th></tr>
+            </thead>
+            <tbody>
+              {% for item in recent_preds %}
+              <tr>
+                <td style="font-weight:600">{{ item.username }}</td>
+                <td>{{ item.city or '—' }}</td>
+                <td>{{ item.area }} m²</td>
+                <td style="font-weight:700;color:var(--accent)">
+                  {% if item.pred_price %}
+                    {% if item.pred_price >= 1000000000 %}{{ "%.2f"|format(item.pred_price / 1000000000) }} Tỷ
+                    {% elif item.pred_price >= 1000000 %}{{ "%.1f"|format(item.pred_price / 1000000) }} Triệu
+                    {% else %}{{ "%.0f"|format(item.pred_price / 1000) }} Nghìn{% endif %}
+                  {% else %}—{% endif %}
+                </td>
+                <td style="color:var(--text-3);font-size:13px">{{ item.created_at }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="td-empty">Chưa có lượt dự đoán nào.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <a href="/admin/houses" class="admin-card__more">Xem tất cả <i class="ph ph-arrow-right"></i></a>
       </div>
 
       <div class="admin-card">
@@ -94,13 +97,13 @@
         {% if model_report %}
         <pre class="model-report-pre">{{ model_report }}</pre>
         {% else %}
-        <div class="empty-hint">
+        <div class="empty-state" style="padding:40px 24px">
+          <i class="ph-fill ph-robot"></i>
           <p>Mô hình chưa được huấn luyện.</p>
-          <a href="/admin/train" class="btn btn--primary btn--sm" style="margin-top:12px">🤖 Huấn luyện ngay</a>
         </div>
         {% endif %}
         <div style="margin-top:16px;">
-          <a href="/admin/train" class="btn btn--primary btn--sm">🚀 Huấn luyện mới</a>
+          <a href="/admin/train" class="btn btn--primary btn--full"><i class="ph ph-rocket-launch"></i> Huấn luyện mới</a>
         </div>
       </div>
     </div>

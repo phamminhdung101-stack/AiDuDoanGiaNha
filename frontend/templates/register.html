@@ -6,59 +6,50 @@
 <div class="auth-wrap">
   <div class="auth-card">
     <div class="auth-card__header">
-      <a href="/login" class="auth-back">← Đăng nhập</a>
-      <div class="auth-card__logo">⬡</div>
+      <div style="font-size:32px;color:var(--accent);margin-bottom:16px"><i class="ph-fill ph-hexagon"></i></div>
       <h1>Tạo tài khoản</h1>
-      <p>Bắt đầu dự đoán giá nhà miễn phí</p>
+      <p>Bắt đầu dự đoán giá nhà hoàn toàn miễn phí</p>
     </div>
 
     <form class="auth-form" method="POST" action="/register">
-      <div class="form-group">
-        <label for="fullname">Họ và tên</label>
-        <input type="text" id="fullname" name="fullname" placeholder="Nguyễn Văn A" required/>
+      <div class="form-row" style="gap:16px">
+        <div class="form-group">
+          <label for="fullname">Họ và tên</label>
+          <input type="text" id="fullname" name="fullname" placeholder="Nguyễn Văn A" required/>
+        </div>
+        <div class="form-group">
+          <label for="username">Tên đăng nhập</label>
+          <input type="text" id="username" name="username" placeholder="username123" required/>
+        </div>
       </div>
       <div class="form-group">
         <label for="email">Email</label>
-        <input type="email" id="email" name="email" placeholder="example@email.com" required/>
-      </div>
-      <div class="form-group">
-        <label for="username">Tên đăng nhập</label>
-        <input type="text" id="username" name="username" placeholder="username123" required/>
+        <div class="input-wrap" style="position:relative">
+          <i class="ph ph-envelope-simple" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+          <input type="email" style="padding-left:40px" id="email" name="email" placeholder="example@email.com" required/>
+        </div>
       </div>
       <div class="form-group">
         <label for="password">Mật khẩu</label>
-        <div class="input-wrap">
-          <input type="password" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required/>
-          <button type="button" class="toggle-pw" onclick="togglePw(this)">👁</button>
+        <div class="input-wrap" style="position:relative">
+          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+          <input type="password" style="padding-left:40px" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required/>
+          <button type="button" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3)" onclick="togglePw(this)"><i class="ph ph-eye"></i></button>
         </div>
       </div>
       <div class="form-group">
         <label for="confirm_password">Xác nhận mật khẩu</label>
-        <input type="password" id="confirm_password" name="confirm_password" placeholder="Nhập lại mật khẩu" required/>
+        <div class="input-wrap" style="position:relative">
+          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+          <input type="password" style="padding-left:40px" id="confirm_password" name="confirm_password" placeholder="Nhập lại mật khẩu" required/>
+        </div>
       </div>
 
-      <button type="submit" class="btn btn--primary btn--full">Tạo tài khoản</button>
+      <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:16px">Đăng ký tài khoản</button>
     </form>
 
     <div class="auth-card__footer">
       Đã có tài khoản? <a href="/login">Đăng nhập</a>
-    </div>
-  </div>
-
-  <div class="auth-visual">
-    <div class="auth-visual__inner">
-      <div class="av-stat">
-        <span class="av-stat__num">94.7%</span>
-        <span class="av-stat__lbl">Độ chính xác</span>
-      </div>
-      <div class="av-stat">
-        <span class="av-stat__num">2s</span>
-        <span class="av-stat__lbl">Thời gian dự đoán</span>
-      </div>
-      <div class="av-stat">
-        <span class="av-stat__num">12K+</span>
-        <span class="av-stat__lbl">Dữ liệu huấn luyện</span>
-      </div>
     </div>
   </div>
 </div>
@@ -68,7 +59,14 @@
 <script>
 function togglePw(btn) {
   const inp = btn.previousElementSibling;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.classList.replace('ph-eye', 'ph-eye-slash');
+  } else {
+    inp.type = 'password';
+    icon.classList.replace('ph-eye-slash', 'ph-eye');
+  }
 }
 </script>
 {% endblock %}

@@ -6,55 +6,40 @@
 <div class="auth-wrap">
   <div class="auth-card">
     <div class="auth-card__header">
-      <a href="/" class="auth-back">← Trang chủ</a>
-      <div class="auth-card__logo">⬡</div>
+      <div style="font-size:32px;color:var(--accent);margin-bottom:16px"><i class="ph-fill ph-hexagon"></i></div>
       <h1>Đăng nhập</h1>
-      <p>Chào mừng trở lại</p>
+      <p>Chào mừng bạn trở lại với HouseAI</p>
     </div>
 
     <form class="auth-form" method="POST" action="/login">
       <div class="form-group">
         <label for="username">Tên đăng nhập</label>
-        <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required autocomplete="username"/>
+        <div class="input-wrap" style="position:relative">
+          <i class="ph ph-user" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+          <input type="text" style="padding-left:40px" id="username" name="username" placeholder="Nhập tên đăng nhập" required autocomplete="username"/>
+        </div>
       </div>
       <div class="form-group">
         <label for="password">Mật khẩu</label>
-        <div class="input-wrap">
-          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
-          <button type="button" class="toggle-pw" onclick="togglePw(this)">👁</button>
+        <div class="input-wrap" style="position:relative">
+          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
+          <input type="password" style="padding-left:40px" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
+          <button type="button" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3)" onclick="togglePw(this)"><i class="ph ph-eye"></i></button>
         </div>
       </div>
 
-      <div class="form-group form-group--row">
-        <label class="checkbox-label">
-          <input type="checkbox" name="is_admin"/>
-          <span class="checkmark"></span>
+      <div class="form-group form-group--row" style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;color:var(--text-2);font-size:14px">
+          <input type="checkbox" name="is_admin" style="width:auto;box-shadow:none"/>
           Đăng nhập với tư cách Quản trị viên
         </label>
       </div>
 
-      <button type="submit" class="btn btn--primary btn--full">Đăng nhập</button>
+      <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:8px">Đăng nhập</button>
     </form>
 
     <div class="auth-card__footer">
       Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
-    </div>
-  </div>
-
-  <div class="auth-visual">
-    <div class="auth-visual__inner">
-      <div class="av-stat">
-        <span class="av-stat__num">45%+</span>
-        <span class="av-stat__lbl">R² Score (AI)</span>
-      </div>
-      <div class="av-stat">
-        <span class="av-stat__num">2s</span>
-        <span class="av-stat__lbl">Thời gian dự đoán</span>
-      </div>
-      <div class="av-stat">
-        <span class="av-stat__num">12K+</span>
-        <span class="av-stat__lbl">Dữ liệu huấn luyện</span>
-      </div>
     </div>
   </div>
 </div>
@@ -64,7 +49,14 @@
 <script>
 function togglePw(btn) {
   const inp = btn.previousElementSibling;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.classList.replace('ph-eye', 'ph-eye-slash');
+  } else {
+    inp.type = 'password';
+    icon.classList.replace('ph-eye-slash', 'ph-eye');
+  }
 }
 </script>
 {% endblock %}
