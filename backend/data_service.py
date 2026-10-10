@@ -188,7 +188,7 @@ def get_recent_predictions(limit: int = 8) -> list:
         cursor.execute("""
             SELECT p.id, u.username, p.city, p.district, p.area, p.pred_price, p.created_at
             FROM predictions p
-            JOIN users u ON p.user_id = u.id
+            LEFT JOIN users u ON p.user_id = u.id
             ORDER BY p.created_at DESC
             LIMIT %s
         """, (limit,))
