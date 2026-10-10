@@ -7,7 +7,10 @@ Kiến trúc:
 
 Đảm bảo logic đơn điệu: nhà lớn hơn (cùng thông số) → giá cao hơn.
 """
+import argparse
+import os
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -18,7 +21,7 @@ from scipy import stats
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
@@ -32,6 +35,7 @@ ROOT_DIR     = Path(__file__).resolve().parent.parent
 DATASET_PATH = ROOT_DIR / "database" / "dataset.csv"
 MODEL_PATH   = ROOT_DIR / "models" / "trained_model.pkl"
 REPORT_PATH  = ROOT_DIR / "models" / "model_report.txt"
+COMPARISON_PATH = ROOT_DIR / "models" / "model_comparison.csv"
 
 # Ngưỡng phân biệt giá bán vs giá thuê trong dataset
 SALE_THRESHOLD = 500_000_000   # >= 500 triệu → bán
@@ -89,7 +93,9 @@ def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
 
 
 def get_estimator(algorithm: str, n_estimators: int, max_depth: int):
-    if algorithm == "gradient_boosting":
+    if algorithm == "linear_regression":
+        return LinearRegression()
+    elif algorithm == "gradient_boosting":
         return GradientBoostingRegressor(
             n_estimators=n_estimators, max_depth=max_depth,
             learning_rate=0.05, subsample=0.8,
@@ -107,9 +113,156 @@ def get_estimator(algorithm: str, n_estimators: int, max_depth: int):
         return GradientBoostingRegressor(n_estimators=300, random_state=42)
 
 
+def build_pipeline(estimator) -> Pipeline:
+    num_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler())
+    ])
+    preprocessor = ColumnTransformer([
+        ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CATEGORICAL_FEATS),
+        ("num", num_pipeline, NUMERIC_FEATS),
+    ])
+    return Pipeline([("preprocessor", preprocessor), ("model", estimator)])
+
+
+def validate_model_bundle(bundle) -> None:
+    required_keys = {
+        "model", "slope", "intercept", "feats", "algorithm", "mode", "accuracy",
+    }
+    if not isinstance(bundle, dict) or not required_keys.issubset(bundle):
+        raise ValueError("Saved model has an invalid bundle structure.")
+
+    model = bundle["model"]
+    if not callable(getattr(model, "predict", None)):
+        raise ValueError("Saved model bundle does not contain a predictor.")
+
+    sample = pd.DataFrame([{
+        "location": "unknown",
+        "ward": "unknown",
+        "rooms": 0.0,
+        "toilets": 0.0,
+    }])
+    prediction = model.predict(sample)
+    if len(prediction) != 1 or not np.isfinite(prediction[0]):
+        raise ValueError("Saved model failed its prediction validation.")
+
+    for key in ("slope", "intercept", "accuracy"):
+        if not np.isfinite(float(bundle[key])):
+            raise ValueError(f"Saved model bundle contains an invalid {key}.")
+
+
+def save_model_bundle(bundle: dict, model_path: Path) -> None:
+    model_path = Path(model_path)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    stage = "create temporary model file"
+    try:
+        fd, temporary_name = tempfile.mkstemp(
+            prefix=f".{model_path.name}.",
+            suffix=".tmp",
+            dir=model_path.parent,
+        )
+        os.close(fd)
+        temporary_path = Path(temporary_name)
+
+        stage = "serialize temporary model"
+        joblib.dump(bundle, temporary_path)
+
+        stage = "reload and validate temporary model"
+        validate_model_bundle(joblib.load(temporary_path))
+
+        stage = "replace active model"
+        os.replace(temporary_path, model_path)
+        temporary_path = None
+
+        stage = "reload and validate saved model"
+        validate_model_bundle(joblib.load(model_path))
+    except OSError as exc:
+        parent_exists = model_path.parent.is_dir()
+        target_exists = model_path.exists()
+        raise OSError(
+            f"Failed to {stage}: target={str(model_path)!r}, "
+            f"parent_exists={parent_exists}, target_exists={target_exists}: {exc}"
+        ) from exc
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
 def clean_and_split(df_raw: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
     """Alias cho app.py."""
     return clean_dataset(df_raw, mode=mode)
+
+
+def compare_models(test_size: float = 0.2, n_estimators: int = 300,
+                   max_depth: int = 4, mode: str = "sale",
+                   output_path: Path = COMPARISON_PATH) -> pd.DataFrame:
+    """Evaluate the three regressors on one shared train/test split."""
+    df_raw = load_dataset()
+    df_clean = clean_dataset(df_raw, mode=mode)
+    n_raw, n_clean = len(df_raw), len(df_clean)
+    print(f"[compare] Raw: {n_raw}  ->  Clean ({mode}): {n_clean}")
+
+    if n_clean < 50:
+        raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {n_clean} dòng.")
+
+    df_clean["price_per_m2"] = df_clean["price"] / df_clean["area"]
+    df_clean["log_ppm"] = np.log(df_clean["price_per_m2"])
+    df_clean["log_area"] = np.log(df_clean["area"])
+    train_idx, test_idx = train_test_split(
+        df_clean.index, test_size=test_size, random_state=42
+    )
+    train_df = df_clean.loc[train_idx]
+    test_df = df_clean.loc[test_idx]
+
+    slope, intercept, *_ = stats.linregress(
+        train_df["log_area"], train_df["log_ppm"]
+    )
+    y_train = train_df["log_ppm"] - (
+        intercept + slope * train_df["log_area"]
+    )
+    X_train = train_df[FEATURE_COLUMNS]
+    X_test = test_df[FEATURE_COLUMNS]
+    log_area_test = np.log(test_df["area"].to_numpy())
+    area_test = test_df["area"].to_numpy()
+    actual_prices = test_df["price"].to_numpy()
+
+    algorithms = (
+        ("linear_regression", LinearRegression()),
+        ("random_forest", get_estimator("random_forest", n_estimators, max_depth)),
+        ("gradient_boosting", get_estimator("gradient_boosting", n_estimators, max_depth)),
+    )
+    results = []
+    for algorithm, estimator in algorithms:
+        pipeline = build_pipeline(estimator)
+        print(f"[compare] Training {algorithm} on {len(X_train)} samples...")
+        pipeline.fit(X_train, y_train)
+        predicted_residuals = pipeline.predict(X_test)
+        predicted_prices = np.exp(
+            intercept + slope * log_area_test + predicted_residuals
+        ) * area_test
+        results.append({
+            "algorithm": algorithm,
+            "mae": mean_absolute_error(actual_prices, predicted_prices),
+            "rmse": float(mean_squared_error(actual_prices, predicted_prices) ** 0.5),
+            "r2": r2_score(actual_prices, predicted_prices),
+            "train_rows": len(train_idx),
+            "test_rows": len(test_idx),
+        })
+
+    comparison = pd.DataFrame(results)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    comparison.to_csv(output_path, index=False, encoding="utf-8-sig")
+    print(comparison.to_string(
+        index=False,
+        formatters={
+            "mae": "{:,.0f}".format,
+            "rmse": "{:,.0f}".format,
+            "r2": "{:.4f}".format,
+        },
+    ))
+    print(f"[compare] Results saved to {output_path}")
+    return comparison
 
 
 def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
@@ -150,17 +303,8 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         X, y, test_size=test_size, random_state=42
     )
 
-    num_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler())
-    ])
-
-    preprocessor = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), CATEGORICAL_FEATS),
-        ("num", num_pipeline, NUMERIC_FEATS),
-    ])
     estimator = get_estimator(algorithm, n_estimators, max_depth)
-    pipeline  = Pipeline([("preprocessor", preprocessor), ("model", estimator)])
+    pipeline = build_pipeline(estimator)
 
     print(f"[train] Training residual model ({algorithm}) on {len(X_train)} samples...")
     pipeline.fit(X_train, y_train)
@@ -196,7 +340,6 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
     cv_std    = round(float(cv_scores.std()),  4)
 
     # ── Lưu bundle ────────────────────────────────────────────────────────
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     bundle = {
         "model":     pipeline,
         "slope":     float(slope),
@@ -206,7 +349,7 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         "mode":      mode,
         "accuracy":  accuracy,
     }
-    joblib.dump(bundle, MODEL_PATH)
+    save_model_bundle(bundle, MODEL_PATH)
 
     # Lưu trained_data.csv
     df_clean.to_csv(MODEL_PATH.parent / "trained_data.csv", index=False, encoding="utf-8-sig")
@@ -257,4 +400,13 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
 
 
 if __name__ == "__main__":
-    result = train(algorithm="gradient_boosting", mode="sale")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--compare-only",
+        action="store_true",
+        help="Compare all three regressors without replacing the active model.",
+    )
+    args = parser.parse_args()
+    compare_models()
+    if not args.compare_only:
+        train(algorithm="gradient_boosting", mode="sale")
