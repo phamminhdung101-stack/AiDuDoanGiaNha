@@ -36,7 +36,7 @@
               <label>Thành phố <span class="req">*</span></label>
               <select name="city" required>
                 <option value="">Chọn thành phố</option>
-                {% for c in ['Hồ Chí Minh','Hà Nội','Đà Nẵng','Cần Thơ','Bình Dương'] %}
+                {% for c in (cities or []) %}
                 <option value="{{ c }}" {% if house and house.city == c %}selected{% endif %}>{{ c }}</option>
                 {% endfor %}
               </select>

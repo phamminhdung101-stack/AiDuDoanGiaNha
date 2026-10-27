@@ -1,6 +1,7 @@
 from pathlib import Path
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from backend.auth import authenticate_user, authenticate_admin, register_user
+from backend.location_service import get_active_location_catalog, StreetValidator
 
 public_bp = Blueprint("public_views", __name__)
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -81,3 +82,21 @@ def logout():
     session.clear()
     flash("Đã đăng xuất thành công.", "success")
     return redirect(url_for("public_views.index"))
+
+
+@public_bp.route("/api/locations")
+def api_locations():
+    catalog = get_active_location_catalog()
+    validator = StreetValidator()
+    return jsonify({
+        "success": bool(catalog),
+        "cities": list(catalog.keys()),
+        "locations": catalog,
+        "street_validation": {
+            "active": validator.is_active,
+            "message": (
+                "Đã kích hoạt xác thực đường–phường." if validator.is_active else
+                "Chưa bật xác thực đường–phường do tập dữ liệu chưa có danh mục đường có cấu trúc."
+            )
+        }
+    })

@@ -54,7 +54,9 @@ def admin_houses_add():
         add_house(request.form.to_dict())
         flash("Đã thêm dữ liệu nhà thành công!", "success")
         return redirect(url_for("admin_views.admin_houses"))
-    return render_template("admin/house_form.html", house=None, action="add")
+    from backend.location_service import get_active_location_catalog
+    cities = list(get_active_location_catalog().keys())
+    return render_template("admin/house_form.html", house=None, action="add", cities=cities)
 
 
 @admin_bp.route("/admin/houses/edit/<int:house_id>", methods=["GET", "POST"])
@@ -68,7 +70,9 @@ def admin_houses_edit(house_id):
         update_house(house_id, request.form.to_dict())
         flash("Đã cập nhật dữ liệu nhà!", "success")
         return redirect(url_for("admin_views.admin_houses"))
-    return render_template("admin/house_form.html", house=house, action="edit")
+    from backend.location_service import get_active_location_catalog
+    cities = list(get_active_location_catalog().keys())
+    return render_template("admin/house_form.html", house=house, action="edit", cities=cities)
 
 
 @admin_bp.route("/admin/houses/delete/<int:house_id>")

@@ -8,6 +8,7 @@ Kiến trúc:
 Đảm bảo logic đơn điệu: nhà lớn hơn (cùng thông số) → giá cao hơn.
 """
 import argparse
+import json
 import os
 import sys
 import tempfile
@@ -26,6 +27,11 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+from backend.location_service import (
+    normalize_city, normalize_ward, build_location_catalog,
+    save_location_catalog, clear_location_cache
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -80,10 +86,15 @@ def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
     df = df[(df['area'] >= Q1_area - 1.5 * IQR_area) & 
             (df['area'] <= Q3_area + 1.5 * IQR_area)]
 
-    # 5. Missing categorical values
+    # 5. Normalize locations & filter invalid/empty
+    df["location"] = df["location"].apply(normalize_city)
+    df["ward"] = df["ward"].apply(normalize_ward)
+    df = df[(df["location"] != "") & (df["ward"] != "")]
+
     for col in CATEGORICAL_FEATS:
-        df[col] = df[col].fillna("unknown").astype(str).str.strip()
-        df.loc[df[col] == "", col] = "unknown"
+        if col not in ("location", "ward"):
+            df[col] = df[col].fillna("unknown").astype(str).str.strip()
+            df.loc[df[col] == "", col] = "unknown"
         
     # Note: Numeric missing values (rooms, toilets) will be handled by SimpleImputer in the pipeline.
     for col in ["rooms", "toilets"]:
@@ -136,6 +147,12 @@ def validate_model_bundle(bundle) -> None:
     if not callable(getattr(model, "predict", None)):
         raise ValueError("Saved model bundle does not contain a predictor.")
 
+    # Validate location_catalog if present in bundle
+    if "location_catalog" in bundle:
+        catalog = bundle["location_catalog"]
+        if not isinstance(catalog, dict) or not catalog:
+            raise ValueError("Saved model bundle contains an invalid or empty location_catalog.")
+
     sample = pd.DataFrame([{
         "location": "unknown",
         "ward": "unknown",
@@ -155,6 +172,7 @@ def save_model_bundle(bundle: dict, model_path: Path) -> None:
     model_path = Path(model_path)
     model_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = None
+    temporary_catalog_path = None
     stage = "create temporary model file"
     try:
         fd, temporary_name = tempfile.mkstemp(
@@ -171,12 +189,31 @@ def save_model_bundle(bundle: dict, model_path: Path) -> None:
         stage = "reload and validate temporary model"
         validate_model_bundle(joblib.load(temporary_path))
 
+        # Lưu danh mục địa điểm ra file tạm nếu có trong bundle
+        if "location_catalog" in bundle:
+            cat_fd, cat_name = tempfile.mkstemp(
+                prefix=".location_catalog.",
+                suffix=".tmp",
+                dir=model_path.parent,
+            )
+            os.close(cat_fd)
+            temporary_catalog_path = Path(cat_name)
+            with open(temporary_catalog_path, "w", encoding="utf-8") as f:
+                json.dump(bundle["location_catalog"], f, ensure_ascii=False, indent=2)
+
         stage = "replace active model"
         os.replace(temporary_path, model_path)
         temporary_path = None
 
+        if temporary_catalog_path is not None:
+            stage = "replace active location catalog"
+            catalog_target = model_path.parent / "location_catalog.json"
+            os.replace(temporary_catalog_path, catalog_target)
+            temporary_catalog_path = None
+
         stage = "reload and validate saved model"
         validate_model_bundle(joblib.load(model_path))
+        clear_location_cache()
     except OSError as exc:
         parent_exists = model_path.parent.is_dir()
         target_exists = model_path.exists()
@@ -185,8 +222,10 @@ def save_model_bundle(bundle: dict, model_path: Path) -> None:
             f"parent_exists={parent_exists}, target_exists={target_exists}: {exc}"
         ) from exc
     finally:
-        if temporary_path is not None:
+        if temporary_path is not None and temporary_path.exists():
             temporary_path.unlink(missing_ok=True)
+        if temporary_catalog_path is not None and temporary_catalog_path.exists():
+            temporary_catalog_path.unlink(missing_ok=True)
 
 
 def clean_and_split(df_raw: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
@@ -339,22 +378,29 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
     cv_mean   = round(float(cv_scores.mean()), 4)
     cv_std    = round(float(cv_scores.std()),  4)
 
+    # ── Bước 1b: Tạo danh mục địa điểm hợp lệ từ dữ liệu sạch ────────────
+    location_catalog = build_location_catalog(df_clean)
+    if not location_catalog:
+        raise ValueError("Dữ liệu sau khi làm sạch không chứa địa điểm (thành phố / phường xã) hợp lệ.")
+
     # ── Lưu bundle ────────────────────────────────────────────────────────
+    trained_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     bundle = {
-        "model":     pipeline,
-        "slope":     float(slope),
-        "intercept": float(intercept),
-        "feats":     FEATURE_COLUMNS,
-        "algorithm": algorithm,
-        "mode":      mode,
-        "accuracy":  accuracy,
+        "model":            pipeline,
+        "slope":            float(slope),
+        "intercept":        float(intercept),
+        "feats":            FEATURE_COLUMNS,
+        "algorithm":        algorithm,
+        "mode":             mode,
+        "accuracy":         accuracy,
+        "location_catalog": location_catalog,
+        "trained_at":       trained_at,
     }
     save_model_bundle(bundle, MODEL_PATH)
 
     # Lưu trained_data.csv
     df_clean.to_csv(MODEL_PATH.parent / "trained_data.csv", index=False, encoding="utf-8-sig")
 
-    trained_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     report = "\n".join([
         "=" * 50,
         "  HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN",
@@ -375,6 +421,8 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         f"Dữ liệu dùng   : {n_clean} bản ghi",
         f"Tập train      : {len(X_train)} mẫu",
         f"Tập test       : {len(X_test)} mẫu",
+        f"Số thành phố   : {len(location_catalog)}",
+        f"Số phường/xã   : {sum(len(w) for w in location_catalog.values())}",
         "-" * 50,
         f"R2 (log)       : {r2_log:.4f}",
         f"Accuracy       : {accuracy}%",
@@ -394,6 +442,7 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         "train_rows": len(X_train), "test_rows": len(X_test),
         "original_rows": n_raw, "cleaned_rows": n_clean,
         "trained_at": trained_at,
+        "location_catalog": location_catalog,
         "baseline_slope": round(slope, 4),
         "baseline_intercept": round(intercept, 4),
     }

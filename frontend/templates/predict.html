@@ -14,25 +14,31 @@
     <form class="predict-form" id="predictForm" method="POST" action="/predict">
       <div class="form-section">
         <div class="form-section__label"><i class="ph ph-map-pin"></i> Vị trí tài sản</div>
+        {% if not cities %}
+        <div style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;line-height:1.5;">
+          <i class="ph-fill ph-warning"></i> <strong>Chưa có danh mục địa điểm hợp lệ từ mô hình.</strong><br/>
+          Vui lòng liên hệ Quản trị viên huấn luyện mô hình với tập dữ liệu chuẩn trước khi sử dụng.
+        </div>
+        {% endif %}
         <div class="form-row">
           <div class="form-group">
             <label>Tỉnh / Thành phố <span class="req">*</span></label>
-            <select name="city" required>
+            <select name="city" id="citySelect" required {% if not cities %}disabled{% endif %}>
               <option value="">Chọn thành phố</option>
-              {% for c in ['Hồ Chí Minh','Hà Nội','Đà Nẵng','Cần Thơ','Bình Dương'] %}
+              {% for c in (cities or []) %}
               <option value="{{ c }}" {% if form_data.get('city') == c %}selected{% endif %}>{{ c }}</option>
               {% endfor %}
             </select>
           </div>
           <div class="form-group">
             <label>Phường / Xã <span class="req">*</span></label>
-            <select name="ward" required data-selected="{{ form_data.get('ward', '') }}">
+            <select name="ward" id="wardSelect" required data-selected="{{ form_data.get('ward', '') }}" {% if not cities %}disabled{% endif %}>
               <option value="">Chọn phường/xã</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label>Đường / Phố <span class="field-hint">(Không bắt buộc)</span></label>
+          <label>Đường / Phố <span class="field-hint">(Không bắt buộc — Hệ thống ghi nhận tên đường; xác thực đường–phường tự động bật khi có danh mục đường chính thức)</span></label>
           <input type="text" name="street" value="{{ form_data.get('street','') }}" placeholder="Ví dụ: Nguyễn Văn Linh"/>
         </div>
       </div>
@@ -148,6 +154,19 @@
           <span class="result-meta__label">Độ tin cậy của mô hình</span>
           <span class="result-meta__val confidence"><i class="ph-fill ph-shield-check"></i> {{ result.confidence }}%</span>
         </div>
+        {% if form_data.get('street') %}
+        <div class="result-meta__item">
+          <span class="result-meta__label">Tên đường</span>
+          <span class="result-meta__val" style="font-size:13px">
+            {{ form_data.get('street') }}
+            {% if result.street_validation and result.street_validation.verified %}
+              <span style="color:var(--green);font-size:12px;margin-left:6px;"><i class="ph-fill ph-check-circle"></i> Đã xác thực thuộc phường</span>
+            {% else %}
+              <span style="color:var(--text-3);font-size:12px;margin-left:6px;" title="{{ result.street_validation.message if result.street_validation else 'Chưa có danh mục đường có cấu trúc để đối chiếu' }}"><i class="ph ph-info"></i> Chưa đối chiếu danh mục đường</span>
+            {% endif %}
+          </span>
+        </div>
+        {% endif %}
         <div class="result-meta__item" style="border:none">
           <span class="result-meta__label">Thuật toán</span>
           <span class="result-meta__val"><i class="ph ph-cpu"></i> {{ result.algorithm }}</span>
@@ -189,31 +208,45 @@ document.getElementById('predictForm').addEventListener('submit', function() {
   document.getElementById('predictBtn').disabled = true;
 });
 
-const WARDS = {
-  'Hồ Chí Minh': [
-    "Phường 1", "Phường 2", "Phường 3", "Phường 4", "Phường 5", "Phường 6", "Phường 7", "Phường Bến Nghé", "Phường Bến Thành", "Phường Đa Kao", "Phường Thảo Điền", "Phường An Phú"
-  ],
-  'Hà Nội': ["Phường Tràng Tiền", "Phường Hàng Bài", "Phường Láng Hạ", "Phường Trung Hòa"],
-  'Đà Nẵng': ["Phường Hải Châu I", "Phường Thạch Thang", "Phường Mỹ An"],
-  'Cần Thơ': ["Phường Tân An", "Phường An Hội"],
-  'Bình Dương': ["Phường Phú Cường", "Phường Chánh Nghĩa"]
-};
+const LOCATIONS = {{ locations | tojson if locations else '{}' }};
 
-const citySel   = document.querySelector('[name="city"]');
-const wardSel   = document.querySelector('[name="ward"]');
-const savedWard = wardSel.dataset.selected || '';
+const citySel   = document.getElementById('citySelect') || document.querySelector('[name="city"]');
+const wardSel   = document.getElementById('wardSelect') || document.querySelector('[name="ward"]');
+const savedWard = (wardSel && wardSel.dataset.selected) ? wardSel.dataset.selected.trim() : '';
 
 function loadWards(city, selected) {
+  if (!wardSel) return;
   wardSel.innerHTML = '<option value="">Chọn phường/xã</option>';
-  (WARDS[city] || []).forEach(d => {
+  const wards = (LOCATIONS && LOCATIONS[city]) ? LOCATIONS[city] : [];
+  
+  let found = false;
+  wards.forEach(w => {
     const opt = document.createElement('option');
-    opt.value = d; opt.textContent = d;
-    if (d === selected) opt.selected = true;
+    opt.value = w;
+    opt.textContent = w;
+    if (w === selected) {
+      opt.selected = true;
+      found = true;
+    }
     wardSel.appendChild(opt);
   });
+
+  // Nếu người dùng có giá trị cũ nhưng không còn tồn tại trong danh mục của thành phố đã chọn
+  if (selected && !found) {
+    const oldOpt = document.createElement('option');
+    oldOpt.value = selected;
+    oldOpt.textContent = `(Giá trị cũ không còn trong danh mục: ${selected})`;
+    oldOpt.selected = true;
+    oldOpt.disabled = true;
+    wardSel.insertBefore(oldOpt, wardSel.firstChild.nextSibling);
+  }
 }
 
-citySel.addEventListener('change', () => loadWards(citySel.value, ''));
-if (citySel.value) loadWards(citySel.value, savedWard);
+if (citySel && wardSel) {
+  citySel.addEventListener('change', () => loadWards(citySel.value, ''));
+  if (citySel.value) {
+    loadWards(citySel.value, savedWard);
+  }
+}
 </script>
 {% endblock %}

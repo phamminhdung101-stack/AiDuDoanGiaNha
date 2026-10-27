@@ -3,6 +3,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from backend.predict import predict_price
 from backend.data_service import save_prediction, get_user_history, delete_prediction
+from backend.location_service import get_active_location_catalog
 
 user_bp = Blueprint("user_views", __name__)
 
@@ -24,18 +25,33 @@ def predict():
     error_msg = None
     form_data = {}
 
+    catalog = get_active_location_catalog()
+    cities = list(catalog.keys())
+
     if request.method == "POST":
         form_data = request.form.to_dict()
         try:
             result = predict_price(form_data)
             result["timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-            save_prediction(session["user_id"], form_data, result)
+            try:
+                save_prediction(session["user_id"], form_data, result)
+            except Exception as db_err:
+                print(f"[WARN] Không thể lưu lịch sử dự đoán: {db_err}")
+        except ValueError as e:
+            error_msg = str(e)
         except FileNotFoundError as e:
             error_msg = str(e)
         except Exception as e:
             error_msg = f"Lỗi dự đoán: {e}"
 
-    return render_template("predict.html", result=result, form_data=form_data, error_msg=error_msg)
+    return render_template(
+        "predict.html",
+        result=result,
+        form_data=form_data,
+        error_msg=error_msg,
+        locations=catalog,
+        cities=cities,
+    )
 
 
 @user_bp.route("/history")
