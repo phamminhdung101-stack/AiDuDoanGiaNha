@@ -59,48 +59,82 @@ def load_dataset() -> pd.DataFrame:
 
 
 def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
+    """Chuẩn hóa dataset cũ/mới; chỉ giữ tin bán nhà tại TP.HCM.
+
+    Không dùng ngưỡng giá 500 triệu để phân biệt bán/thuê vì nhà bán giá thấp
+    vẫn có thể hợp lệ và giá thuê có thể vượt ngưỡng này.
+    """
     df = df.copy()
-    
-    # 1. Remove duplicates
+    if mode != "sale":
+        raise ValueError("Dataset cập nhật hiện chỉ gồm tin BÁN nhà TP.HCM; không thể train chế độ giá thuê.")
+
+    # Chuẩn hóa tên cột từ bộ Tinix/Hugging Face sang schema cũ của ứng dụng.
+    aliases = {
+        "province_name": "location", "ward_name": "ward",
+        "bedroom_count": "rooms", "bathroom_count": "toilets",
+        "name": "title", "description": "description",
+    }
+    for source, target in aliases.items():
+        if source in df.columns and target not in df.columns:
+            df[target] = df[source]
+
+    for col in ("location", "ward", "rooms", "toilets", "title", "description"):
+        if col not in df.columns:
+            df[col] = np.nan
+
+    # Chỉ sử dụng dữ liệu TP. Hồ Chí Minh (kể cả các cách ghi tên tương đương).
+    city_text = df["location"].fillna("").astype(str).str.lower()
+    hcm_mask = city_text.str.contains(r"hồ\s*chí\s*minh|ho\s*chi\s*minh|tp\.?\s*hcm|tphcm", regex=True)
+    df = df.loc[hcm_mask].copy()
+
+    # Dự án này định giá nhà riêng/nhà phố; loại đất và căn hộ khỏi tập train.
+    if "property_type_name" in df.columns:
+        allowed = df["property_type_name"].fillna("").astype(str).str.lower().str.strip()
+        allowed_mask = allowed.isin({"nhà", "nha", "biệt thự/nhà liền kề", "biet thu/nha lien ke",
+                                     "biệt thự / nhà liền kề", "biet thu / nha lien ke",
+                                     "nhà mặt phố", "nha mat pho"})
+        df = df.loc[allowed_mask].copy()
+
+    # Lọc tin cho thuê dựa trên nội dung, không dùng ngưỡng giá cố định.
+    title_text = df["title"].fillna("").astype(str).str.lower()
+    all_text = (title_text + " " + df["description"].fillna("").astype(str).str.lower())
+    rent_pattern = r"cho thuê|cần thuê|tìm thuê|thuê nhà|thuê nguyên căn|\bcho thue\b|\bcan thue\b|\btim thue\b|\bthue nha\b|/tháng|/thang|mỗi tháng|moi thang|per month"
+    sale_pattern = r"bán|cần bán|chuyển nhượng|sang nhượng|ban nha|can ban|chuyen nhuong"
+    rental_title = title_text.str.contains(rent_pattern, regex=True, na=False)
+    explicit_sale = all_text.str.contains(sale_pattern, regex=True, na=False)
+    # Tin có tiêu đề cho thuê luôn bị loại; tin bán có nhắc hợp đồng thuê trong mô tả vẫn được giữ.
+    df = df.loc[~rental_title & (explicit_sale | ~all_text.str.contains(rent_pattern, regex=True, na=False))].copy()
+
+    # Xóa trùng trước khi xử lý giá.
     df = df.drop_duplicates()
-    
-    # 2. Convert types and drop missing critical values
     df["price"] = pd.to_numeric(df["price"], errors="coerce")
-    df["area"]  = pd.to_numeric(df["area"],  errors="coerce")
+    df["area"] = pd.to_numeric(df["area"], errors="coerce")
     df = df.dropna(subset=["price", "area"])
-    df = df[(df["price"] > 0) & (df["area"] > 0)]
-
-    # 3. Create price_per_m2 feature
+    df = df[(df["price"] >= 100_000_000) & (df["price"] <= 200_000_000_000)]
+    df = df[(df["area"] >= 10) & (df["area"] <= 1_000)]
     df["price_per_m2"] = df["price"] / df["area"]
+    df = df[df["price_per_m2"].between(5_000_000, 1_000_000_000)]
 
-    # 4. Outlier removal using IQR
-    Q1_ppm = df['price_per_m2'].quantile(0.25)
-    Q3_ppm = df['price_per_m2'].quantile(0.75)
-    IQR_ppm = Q3_ppm - Q1_ppm
-    df = df[(df['price_per_m2'] >= Q1_ppm - 1.5 * IQR_ppm) & 
-            (df['price_per_m2'] <= Q3_ppm + 1.5 * IQR_ppm)]
-            
-    Q1_area = df['area'].quantile(0.25)
-    Q3_area = df['area'].quantile(0.75)
-    IQR_area = Q3_area - Q1_area
-    df = df[(df['area'] >= Q1_area - 1.5 * IQR_area) & 
-            (df['area'] <= Q3_area + 1.5 * IQR_area)]
+    # Loại phần đuôi bất thường theo log giá/m² (0,5% mỗi phía), tránh IQR
+    # quá gắt làm mất các căn nhà ở phân khúc cao/thấp hợp lệ.
+    log_ppm = np.log(df["price_per_m2"])
+    if len(df) >= 100:
+        low, high = log_ppm.quantile([0.005, 0.995])
+        df = df[log_ppm.between(low, high)].copy()
 
-    # 5. Normalize locations & filter invalid/empty
     df["location"] = df["location"].apply(normalize_city)
     df["ward"] = df["ward"].apply(normalize_ward)
     df = df[(df["location"] != "") & (df["ward"] != "")]
+    # Chuẩn hóa toàn bộ dữ liệu về một tên thành phố duy nhất.
+    df["location"] = "Tp Hồ Chí Minh"
 
-    for col in CATEGORICAL_FEATS:
-        if col not in ("location", "ward"):
-            df[col] = df[col].fillna("unknown").astype(str).str.strip()
-            df.loc[df[col] == "", col] = "unknown"
-        
-    # Note: Numeric missing values (rooms, toilets) will be handled by SimpleImputer in the pipeline.
-    for col in ["rooms", "toilets"]:
-        df[col] = pd.to_numeric(df.get(col, np.nan), errors="coerce")
+    for col in ("rooms", "toilets"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+        df.loc[df[col] < 0, col] = np.nan
 
-    return df
+    if "published_at" in df.columns:
+        df["published_at"] = pd.to_datetime(df["published_at"], errors="coerce", utc=True)
+    return df.reset_index(drop=True)
 
 
 def get_estimator(algorithm: str, n_estimators: int, max_depth: int):
@@ -236,32 +270,18 @@ def clean_and_split(df_raw: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
 def compare_models(test_size: float = 0.2, n_estimators: int = 300,
                    max_depth: int = 4, mode: str = "sale",
                    output_path: Path = COMPARISON_PATH) -> pd.DataFrame:
-    """Evaluate the three regressors on one shared train/test split."""
+    """So sánh mô hình trên cùng tập test theo thời gian (nếu có ngày đăng)."""
     df_raw = load_dataset()
     df_clean = clean_dataset(df_raw, mode=mode)
-    n_raw, n_clean = len(df_raw), len(df_clean)
-    print(f"[compare] Raw: {n_raw}  ->  Clean ({mode}): {n_clean}")
+    print(f"[compare] TP.HCM | Raw: {len(df_raw)} -> Clean: {len(df_clean)}")
+    if len(df_clean) < 50:
+        raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {len(df_clean)} dòng.")
 
-    if n_clean < 50:
-        raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {n_clean} dòng.")
-
-    df_clean["price_per_m2"] = df_clean["price"] / df_clean["area"]
-    df_clean["log_ppm"] = np.log(df_clean["price_per_m2"])
-    df_clean["log_area"] = np.log(df_clean["area"])
-    train_idx, test_idx = train_test_split(
-        df_clean.index, test_size=test_size, random_state=42
-    )
-    train_df = df_clean.loc[train_idx]
-    test_df = df_clean.loc[test_idx]
-
-    slope, intercept, *_ = stats.linregress(
-        train_df["log_area"], train_df["log_ppm"]
-    )
-    y_train = train_df["log_ppm"] - (
-        intercept + slope * train_df["log_area"]
-    )
-    X_train = train_df[FEATURE_COLUMNS]
-    X_test = test_df[FEATURE_COLUMNS]
+    train_df, test_df, split_method = _split_train_test(df_clean, test_size)
+    slope, intercept = _fit_baseline(train_df)
+    y_train = np.log(train_df["price"] / train_df["area"]) - (
+        intercept + slope * np.log(train_df["area"]))
+    X_train, X_test = train_df[FEATURE_COLUMNS], test_df[FEATURE_COLUMNS]
     log_area_test = np.log(test_df["area"].to_numpy())
     area_test = test_df["area"].to_numpy()
     actual_prices = test_df["price"].to_numpy()
@@ -277,185 +297,171 @@ def compare_models(test_size: float = 0.2, n_estimators: int = 300,
         print(f"[compare] Training {algorithm} on {len(X_train)} samples...")
         pipeline.fit(X_train, y_train)
         predicted_residuals = pipeline.predict(X_test)
-        predicted_prices = np.exp(
-            intercept + slope * log_area_test + predicted_residuals
-        ) * area_test
+        predicted_prices = np.exp(intercept + slope * log_area_test + predicted_residuals) * area_test
         results.append({
             "algorithm": algorithm,
             "mae": mean_absolute_error(actual_prices, predicted_prices),
             "rmse": float(mean_squared_error(actual_prices, predicted_prices) ** 0.5),
             "r2": r2_score(actual_prices, predicted_prices),
-            "train_rows": len(train_idx),
-            "test_rows": len(test_idx),
+            "train_rows": len(train_df),
+            "test_rows": len(test_df),
+            "split_method": split_method,
         })
 
     comparison = pd.DataFrame(results)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(output_path, index=False, encoding="utf-8-sig")
-    print(comparison.to_string(
-        index=False,
-        formatters={
-            "mae": "{:,.0f}".format,
-            "rmse": "{:,.0f}".format,
-            "r2": "{:.4f}".format,
-        },
-    ))
+    print(comparison.to_string(index=False, formatters={
+        "mae": "{:,.0f}".format, "rmse": "{:,.0f}".format, "r2": "{:.4f}".format,
+    }))
     print(f"[compare] Results saved to {output_path}")
     return comparison
+
+
+def _split_train_test(df: pd.DataFrame, test_size: float):
+    """Dùng tập test theo thời gian nếu dataset có ngày đăng; fallback random."""
+    if "published_at" in df.columns:
+        dates = pd.to_datetime(df["published_at"], errors="coerce", utc=True)
+        valid = dates.notna()
+        if valid.sum() >= 50:
+            ordered = df.loc[valid].assign(_date=dates[valid]).sort_values("_date")
+            split_at = max(1, min(len(ordered) - 1, int(len(ordered) * (1 - test_size))))
+            return ordered.iloc[:split_at].drop(columns=["_date"]), ordered.iloc[split_at:].drop(columns=["_date"]), "time"
+    train_df, test_df = train_test_split(df, test_size=test_size, random_state=42)
+    return train_df, test_df, "random"
+
+
+def _fit_baseline(df: pd.DataFrame):
+    log_area = np.log(df["area"].to_numpy())
+    log_ppm = np.log((df["price"] / df["area"]).to_numpy())
+    slope, intercept, *_ = stats.linregress(log_area, log_ppm)
+    return float(slope), float(intercept)
 
 
 def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
           n_estimators: int = 300, max_depth: int = 4,
           mode: str = "sale") -> dict:
-    """
-    Train 2-component model và lưu bundle dict.
-    Returns metrics dict.
-    """
-    df_raw   = load_dataset()
+    """Đánh giá trên holdout rồi fit model cuối cùng bằng toàn bộ dữ liệu sạch."""
+    df_raw = load_dataset()
     df_clean = clean_dataset(df_raw, mode=mode)
-
     n_raw, n_clean = len(df_raw), len(df_clean)
-    print(f"[train] Raw: {n_raw}  →  Clean ({mode}): {n_clean}")
-
+    print(f"[train] TP.HCM | Raw: {n_raw} -> Clean ({mode}): {n_clean}")
     if n_clean < 50:
-        raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {n_clean} dòng.")
+        raise ValueError(f"Dữ liệu TP.HCM sau làm sạch chỉ còn {n_clean} dòng; cần ít nhất 50 dòng.")
 
-    df_clean["price_per_m2"] = df_clean["price"] / df_clean["area"]
-    df_clean["log_ppm"]      = np.log(df_clean["price_per_m2"])
-    df_clean["log_area"]     = np.log(df_clean["area"])
+    train_df, test_df, split_method = _split_train_test(df_clean, test_size)
+    if len(train_df) < 25 or len(test_df) < 10:
+        raise ValueError("Không đủ dữ liệu cho tập train/test sau khi chia.")
 
-    # ── Bước 1: Fit đường cong baseline area ──────────────────────────────
-    slope, intercept, r_val, *_ = stats.linregress(
-        df_clean["log_area"], df_clean["log_ppm"]
-    )
-    print(f"[train] Baseline: log(ppm) = {intercept:.3f} + {slope:.3f}*log(area)")
-    print(f"[train] Exponent total price: area^{1+slope:.3f}  ({'monotone ✓' if 1+slope > 0 else 'NON-monotone ✗'})")
-
-    # ── Bước 2: Tính residual & train quality model ────────────────────────
-    df_clean["log_ppm_baseline"] = intercept + slope * df_clean["log_area"]
-    df_clean["log_ppm_residual"] = df_clean["log_ppm"] - df_clean["log_ppm_baseline"]
-
-    X = df_clean[FEATURE_COLUMNS]
-    y = df_clean["log_ppm_residual"]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=42
-    )
-
+    # Đánh giá: baseline chỉ fit trên train để tránh rò rỉ dữ liệu test.
+    eval_slope, eval_intercept = _fit_baseline(train_df)
+    y_train = np.log(train_df["price"] / train_df["area"]) - (
+        eval_intercept + eval_slope * np.log(train_df["area"]))
+    X_train, X_test = train_df[FEATURE_COLUMNS], test_df[FEATURE_COLUMNS]
     estimator = get_estimator(algorithm, n_estimators, max_depth)
-    pipeline = build_pipeline(estimator)
+    eval_pipeline = build_pipeline(estimator)
+    print(f"[train] Training {algorithm} on {len(X_train)} samples; test={len(X_test)} ({split_method})")
+    eval_pipeline.fit(X_train, y_train)
 
-    print(f"[train] Training residual model ({algorithm}) on {len(X_train)} samples...")
-    pipeline.fit(X_train, y_train)
+    y_pred_resid = eval_pipeline.predict(X_test)
+    test_log_area = np.log(test_df["area"].to_numpy())
+    predicted_prices = np.exp(
+        eval_intercept + eval_slope * test_log_area + y_pred_resid
+    ) * test_df["area"].to_numpy()
+    actual_prices = test_df["price"].to_numpy()
+    mae_price = float(mean_absolute_error(actual_prices, predicted_prices))
+    rmse_price = float(mean_squared_error(actual_prices, predicted_prices) ** 0.5)
+    r2_price = float(r2_score(actual_prices, predicted_prices))
+    r2_log = float(r2_score(np.log(actual_prices), np.log(np.maximum(predicted_prices, 1))))
+    # Giữ key 'accuracy' để tương thích giao diện hiện tại; đây là R² log quy đổi,
+    # không phải accuracy của bài toán phân loại.
+    accuracy = round(max(0.0, min(r2_log, 1.0)) * 100, 1)
+    residual_r2 = float(r2_score(y_train, eval_pipeline.predict(X_train)))
 
-    # ── Metrics trên log_ppm_residual ─────────────────────────────────────
-    y_pred   = pipeline.predict(X_test)
-    r2       = r2_score(y_test, y_pred)
-    mae_log  = mean_absolute_error(y_test, y_pred)
+    # Fit mô hình production trên toàn bộ dữ liệu sạch sau khi đã đánh giá.
+    final_slope, final_intercept = _fit_baseline(df_clean)
+    final_residual = np.log(df_clean["price"] / df_clean["area"]) - (
+        final_intercept + final_slope * np.log(df_clean["area"]))
+    final_pipeline = build_pipeline(get_estimator(algorithm, n_estimators, max_depth))
+    final_pipeline.fit(df_clean[FEATURE_COLUMNS], final_residual)
 
-    # Metrics trên giá thực (VNĐ) để dễ hiểu
-    def full_predict(row):
-        log_ppm_base = intercept + slope * np.log(max(row["area"], 1.0))
-        X_q = pd.DataFrame([{c: row[c] for c in FEATURE_COLUMNS}])
-        log_ppm_q = float(pipeline.predict(X_q)[0])
-        return np.exp(log_ppm_base + log_ppm_q) * row["area"]
-
-    test_idx = X_test.index
-    y_price_actual = df_clean.loc[test_idx, "price"].values
-    y_price_pred   = np.array([
-        full_predict(df_clean.loc[i]) for i in test_idx
-    ])
-    mae_price  = mean_absolute_error(y_price_actual, y_price_pred)
-    rmse_price = float(mean_squared_error(y_price_actual, y_price_pred) ** 0.5)
-    r2_price   = r2_score(y_price_actual, y_price_pred)
-    r2_log     = r2_score(np.log(y_price_actual), np.log(y_price_pred))
-    accuracy   = round(max(0.0, min(r2_log, 1.0)) * 100, 1)
-
-    # CV trên residual model
-    cv        = KFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(pipeline, X_train, y_train, cv=cv,
-                                scoring="r2", n_jobs=-1)
-    cv_mean   = round(float(cv_scores.mean()), 4)
-    cv_std    = round(float(cv_scores.std()),  4)
-
-    # ── Bước 1b: Tạo danh mục địa điểm hợp lệ từ dữ liệu sạch ────────────
-    location_catalog = build_location_catalog(df_clean)
+    wards = sorted(w for w in df_clean["ward"].dropna().astype(str).unique() if w.strip())
+    location_catalog = {"Tp Hồ Chí Minh": wards} if wards else {}
     if not location_catalog:
-        raise ValueError("Dữ liệu sau khi làm sạch không chứa địa điểm (thành phố / phường xã) hợp lệ.")
+        raise ValueError("Dataset không có danh mục phường/xã hợp lệ.")
 
-    # ── Lưu bundle ────────────────────────────────────────────────────────
     trained_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     bundle = {
-        "model":            pipeline,
-        "slope":            float(slope),
-        "intercept":        float(intercept),
-        "feats":            FEATURE_COLUMNS,
-        "algorithm":        algorithm,
-        "mode":             mode,
-        "accuracy":         accuracy,
+        "model": final_pipeline,
+        "slope": float(final_slope),
+        "intercept": float(final_intercept),
+        "feats": FEATURE_COLUMNS,
+        "algorithm": algorithm,
+        "mode": mode,
+        "accuracy": accuracy,
         "location_catalog": location_catalog,
-        "trained_at":       trained_at,
+        "trained_at": trained_at,
+        "training_region": "Tp Hồ Chí Minh",
+        "training_rows": int(n_clean),
+        "evaluation_split": split_method,
+        "evaluation_r2_log": r2_log,
+        "evaluation_mae_vnd": mae_price,
     }
     save_model_bundle(bundle, MODEL_PATH)
-
-    # Lưu trained_data.csv
     df_clean.to_csv(MODEL_PATH.parent / "trained_data.csv", index=False, encoding="utf-8-sig")
 
     report = "\n".join([
-        "=" * 50,
+        "=" * 58,
         "  HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN",
-        "=" * 50,
-        f"Thời gian      : {trained_at}",
-        f"Thuật toán     : {algorithm} (residual model)",
-        f"Chế độ         : {'Giá bán' if mode == 'sale' else 'Giá thuê'}",
-        f"n_estimators   : {n_estimators}",
-        f"max_depth      : {max_depth}",
-        f"Test size      : {int(test_size * 100)}%",
-        "-" * 50,
-        "BASELINE CURVE",
-        f"  slope        : {slope:.4f}",
-        f"  intercept    : {intercept:.4f}",
-        f"  price ∝ area^{1+slope:.3f}  (monotone tăng)",
-        "-" * 50,
-        f"Dữ liệu gốc    : {n_raw} bản ghi",
-        f"Dữ liệu dùng   : {n_clean} bản ghi",
-        f"Tập train      : {len(X_train)} mẫu",
-        f"Tập test       : {len(X_test)} mẫu",
-        f"Số thành phố   : {len(location_catalog)}",
-        f"Số phường/xã   : {sum(len(w) for w in location_catalog.values())}",
-        "-" * 50,
-        f"R2 (log)       : {r2_log:.4f}",
-        f"Accuracy       : {accuracy}%",
-        f"MAE            : {mae_price/1_000_000:.1f} triệu VNĐ",
-        f"RMSE           : {rmse_price/1_000_000:.1f} triệu VNĐ",
-        f"CV R2 (resid.) : {cv_mean} ± {cv_std} (5-fold)",
-        "=" * 50,
+        "=" * 58,
+        f"Thời gian             : {trained_at}",
+        f"Phạm vi dữ liệu       : TP. Hồ Chí Minh",
+        f"Thuật toán            : {algorithm}",
+        f"Chế độ                : {'Giá bán' if mode == 'sale' else 'Giá thuê'}",
+        f"Phương pháp chia      : {split_method} (test {int(test_size * 100)}%)",
+        f"Dữ liệu gốc           : {n_raw:,} bản ghi",
+        f"Dữ liệu sau làm sạch  : {n_clean:,} bản ghi",
+        f"Tập train             : {len(train_df):,} mẫu",
+        f"Tập test              : {len(test_df):,} mẫu",
+        f"Số phường/xã          : {sum(len(w) for w in location_catalog.values()):,}",
+        "-" * 58,
+        f"R² giá log            : {r2_log:.4f}",
+        f"R² giá thực           : {r2_price:.4f}",
+        f"Điểm R² log quy đổi   : {accuracy}% (không phải accuracy phân loại)",
+        f"MAE                   : {mae_price / 1_000_000:.1f} triệu VNĐ",
+        f"RMSE                  : {rmse_price / 1_000_000:.1f} triệu VNĐ",
+        f"R² residual trên train: {residual_r2:.4f}",
+        f"Baseline slope        : {final_slope:.4f}",
+        f"Baseline intercept    : {final_intercept:.4f}",
+        "=" * 58,
     ])
     REPORT_PATH.write_text(report, encoding="utf-8")
     print(report)
-
     return {
-        "algorithm": algorithm, "mode": mode,
-        "r2": round(r2_log, 4), "mae": round(mae_price, 0),
-        "rmse": round(rmse_price, 0), "accuracy": accuracy,
-        "cv_r2": cv_mean, "cv_std": cv_std,
-        "train_rows": len(X_train), "test_rows": len(X_test),
-        "original_rows": n_raw, "cleaned_rows": n_clean,
-        "trained_at": trained_at,
-        "location_catalog": location_catalog,
-        "baseline_slope": round(slope, 4),
-        "baseline_intercept": round(intercept, 4),
+        "algorithm": algorithm, "mode": mode, "r2": round(r2_log, 4),
+        "mae": round(mae_price, 0), "rmse": round(rmse_price, 0),
+        "accuracy": accuracy, "train_rows": len(train_df), "test_rows": len(test_df),
+        "original_rows": n_raw, "cleaned_rows": n_clean, "trained_at": trained_at,
+        "location_catalog": location_catalog, "baseline_slope": round(final_slope, 4),
+        "baseline_intercept": round(final_intercept, 4), "evaluation_split": split_method,
     }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--compare-only",
-        action="store_true",
-        help="Compare all three regressors without replacing the active model.",
+        "--algorithm",
+        choices=["linear_regression", "random_forest", "gradient_boosting"],
+        default="linear_regression"
     )
+    parser.add_argument(
+        "--skip-compare",
+        action="store_true"
+    )
+
     args = parser.parse_args()
-    compare_models()
-    if not args.compare_only:
-        train(algorithm="gradient_boosting", mode="sale")
+
+    if not args.skip_compare:
+        compare_models()
+
+    train(algorithm=args.algorithm, mode="sale")
