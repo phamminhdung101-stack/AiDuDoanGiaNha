@@ -1,28 +1,23 @@
-==================================================
+==========================================================
   HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN
-==================================================
-Thời gian      : 2026-10-26 10:30:30
-Thuật toán     : random_forest (residual model)
-Chế độ         : Giá bán
-n_estimators   : 200
-max_depth      : 20
-Test size      : 20%
---------------------------------------------------
-BASELINE CURVE
-  slope        : -0.1184
-  intercept    : 18.9052
-  price ∝ area^0.882  (monotone tăng)
---------------------------------------------------
-Dữ liệu gốc    : 2163 bản ghi
-Dữ liệu dùng   : 2105 bản ghi
-Tập train      : 1684 mẫu
-Tập test       : 421 mẫu
-Số thành phố   : 1
-Số phường/xã   : 137
---------------------------------------------------
-R2 (log)       : 0.5307
-Accuracy       : 53.1%
-MAE            : 1943.5 triệu VNĐ
-RMSE           : 2722.4 triệu VNĐ
-CV R2 (resid.) : 0.0594 ± 0.0395 (5-fold)
-==================================================
+==========================================================
+Thời gian             : 2026-10-31 22:34:14
+Phạm vi dữ liệu       : TP. Hồ Chí Minh
+Thuật toán            : linear_regression
+Chế độ                : Giá bán
+Phương pháp chia      : time (test 20%)
+Dữ liệu gốc           : 757,055 bản ghi
+Dữ liệu sau làm sạch  : 665,711 bản ghi
+Tập train             : 530,476 mẫu
+Tập test              : 132,619 mẫu
+Số phường/xã          : 172
+----------------------------------------------------------
+R² giá log            : 0.7965
+R² giá thực           : 0.7386
+Điểm R² log quy đổi   : 79.6% (không phải accuracy phân loại)
+MAE                   : 4904.3 triệu VNĐ
+RMSE                  : 11238.3 triệu VNĐ
+R² residual trên train: 0.4658
+Baseline slope        : 0.0172
+Baseline intercept    : 18.6310
+==========================================================
