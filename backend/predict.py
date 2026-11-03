@@ -58,9 +58,50 @@ def reload_model():
 FEATURE_COLUMNS = ["location", "ward", "rooms", "toilets"]
 
 
+# Danh mục các tuyến phố trung tâm / mặt tiền cao cấp kèm hệ số vị trí
+PRIME_STREETS = {
+    # Diamond Tier (Quận 1 / Hoàn Kiếm lõi trung tâm): 2.5x
+    "nguyễn huệ": 2.5,
+    "nguyen hue": 2.5,
+    "đồng khởi": 2.5,
+    "dong khoi": 2.5,
+    "lê lợi": 2.2,
+    "le loi": 2.2,
+    "lê thánh tôn": 2.0,
+    "le thanh ton": 2.0,
+    "hàm nghi": 1.8,
+    "ham nghi": 1.8,
+    "pasteur": 1.7,
+    "nam kỳ khởi nghĩa": 1.7,
+    "nam ky khoi nghia": 1.7,
+    "hai bà trưng": 1.6,
+    "hai ba trung": 1.6,
+    "trần hưng đạo": 1.5,
+    "tran hung dao": 1.5,
+    "nguyễn thị minh khai": 1.5,
+    "nguyen thi minh khai": 1.5,
+    "điện biên phủ": 1.4,
+    "dien bien phu": 1.4,
+    "cách mạng tháng 8": 1.4,
+    "cach mang thang 8": 1.4,
+    "nguyễn văn linh": 1.3,
+    "nguyen van linh": 1.3,
+}
+
+def get_street_multiplier(street_name: str, ward: str = "") -> float:
+    if not street_name:
+        return 1.0
+    import unicodedata, re
+    s_clean = unicodedata.normalize("NFC", str(street_name)).lower().strip()
+    s_clean = re.sub(r"^(đường|phố|đ\.|p\.)\s+", "", s_clean).strip()
+    for prime_key, mult in PRIME_STREETS.items():
+        if prime_key in s_clean or s_clean in prime_key:
+            return mult
+    return 1.0
+
 def _raw_predict(bundle: dict, area: float, location: str, ward: str,
-                 rooms: float, toilets: float) -> float:
-    """Dự đoán giá (VNĐ) với đảm bảo đơn điệu theo area."""
+                 rooms: float, toilets: float, floors: float = 1.0, street: str = "") -> float:
+    """Dự đoán giá (VNĐ) với đảm bảo đơn điệu theo area và tích hợp số tầng, tuyến đường."""
     slope     = bundle["slope"]
     intercept = bundle["intercept"]
     model     = bundle["model"]
@@ -77,8 +118,12 @@ def _raw_predict(bundle: dict, area: float, location: str, ward: str,
     }])
     log_ppm_quality = float(model.predict(X)[0])
 
-    # 3. Tổng hợp: ppm * area
-    ppm   = np.exp(log_ppm_base + log_ppm_quality)
+    # 3. Yếu tố số tầng và tuyến đường
+    floors_factor = 1.0 + max(0.0, float(floors) - 1.0) * 0.08
+    street_factor = get_street_multiplier(street, ward)
+
+    # 4. Tổng hợp: ppm * area
+    ppm   = np.exp(log_ppm_base + log_ppm_quality) * floors_factor * street_factor
     price = ppm * area
     return max(price, 0.0)
 
@@ -136,8 +181,16 @@ def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]
     validator = StreetValidator(street_catalog=street_catalog)
     street_res = validator.validate(norm_city, norm_ward, form_data.get("street"))
 
+    try:
+        floors_val = form_data.get("floors", 1)
+        floors = float(floors_val if floors_val not in (None, "") else 1.0)
+    except (ValueError, TypeError):
+        floors = 1.0
+    if floors < 1.0:
+        floors = 1.0
+
     # 5. Thực hiện dự đoán giá
-    price = _raw_predict(bundle, area, norm_city, norm_ward, rooms, toilets)
+    price = _raw_predict(bundle, area, norm_city, norm_ward, rooms, toilets, floors=floors, street=form_data.get("street", ""))
 
     # 6. Biên độ dao động
     if area > 0 and rooms > 0 and norm_ward != "unknown":

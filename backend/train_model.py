@@ -51,6 +51,13 @@ FEATURE_COLUMNS   = ["location", "ward", "rooms", "toilets"]
 CATEGORICAL_FEATS = ["location", "ward"]
 NUMERIC_FEATS     = ["rooms", "toilets"]
 
+COLUMN_ALIASES = {
+    "province_name": "location", "ward_name": "ward",
+    "bedroom_count": "rooms", "bathroom_count": "toilets",
+    "name": "title", "description": "description",
+    "posted_at": "published_at",
+}
+
 
 def load_dataset() -> pd.DataFrame:
     if not DATASET_PATH.exists():
@@ -59,21 +66,17 @@ def load_dataset() -> pd.DataFrame:
 
 
 def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
-    """Chuẩn hóa dataset cũ/mới; chỉ giữ tin bán nhà tại TP.HCM.
-
-    Không dùng ngưỡng giá 500 triệu để phân biệt bán/thuê vì nhà bán giá thấp
-    vẫn có thể hợp lệ và giá thuê có thể vượt ngưỡng này.
+    """Chuẩn hóa và làm sạch dataset cho toàn bộ các tỉnh thành trên cả nước.
+    
+    Hỗ trợ 3 chế độ dữ liệu:
+    - 'sale' (Mặc định): Lọc tin BÁN nhà trên toàn quốc (giá >= 100 triệu, diện tích 10 - 1000m²).
+    - 'all': Sử dụng TOÀN BỘ dataset mới (cả Bán và Thuê đa phân khúc trên toàn quốc).
+    - 'rent': Lọc tin CHO THUÊ nhà trên toàn quốc (giá < 100 triệu).
     """
     df = df.copy()
-    if mode != "sale":
-        raise ValueError("Dataset cập nhật hiện chỉ gồm tin BÁN nhà TP.HCM; không thể train chế độ giá thuê.")
 
     # Chuẩn hóa tên cột từ bộ Tinix/Hugging Face sang schema cũ của ứng dụng.
-    aliases = {
-        "province_name": "location", "ward_name": "ward",
-        "bedroom_count": "rooms", "bathroom_count": "toilets",
-        "name": "title", "description": "description",
-    }
+    aliases = COLUMN_ALIASES
     for source, target in aliases.items():
         if source in df.columns and target not in df.columns:
             df[target] = df[source]
@@ -82,51 +85,50 @@ def clean_dataset(df: pd.DataFrame, mode: str = "sale") -> pd.DataFrame:
         if col not in df.columns:
             df[col] = np.nan
 
-    # Chỉ sử dụng dữ liệu TP. Hồ Chí Minh (kể cả các cách ghi tên tương đương).
-    city_text = df["location"].fillna("").astype(str).str.lower()
-    hcm_mask = city_text.str.contains(r"hồ\s*chí\s*minh|ho\s*chi\s*minh|tp\.?\s*hcm|tphcm", regex=True)
-    df = df.loc[hcm_mask].copy()
+    # Chuẩn hóa địa danh hành chính (Thành phố và Phường/Xã trên toàn quốc)
+    df["location"] = df["location"].apply(normalize_city)
+    df["ward"] = df["ward"].apply(normalize_ward)
+    df = df[(df["location"] != "") & (df["ward"] != "")]
 
-    # Dự án này định giá nhà riêng/nhà phố; loại đất và căn hộ khỏi tập train.
-    if "property_type_name" in df.columns:
-        allowed = df["property_type_name"].fillna("").astype(str).str.lower().str.strip()
-        allowed_mask = allowed.isin({"nhà", "nha", "biệt thự/nhà liền kề", "biet thu/nha lien ke",
-                                     "biệt thự / nhà liền kề", "biet thu / nha lien ke",
-                                     "nhà mặt phố", "nha mat pho"})
-        df = df.loc[allowed_mask].copy()
-
-    # Lọc tin cho thuê dựa trên nội dung, không dùng ngưỡng giá cố định.
-    title_text = df["title"].fillna("").astype(str).str.lower()
-    all_text = (title_text + " " + df["description"].fillna("").astype(str).str.lower())
-    rent_pattern = r"cho thuê|cần thuê|tìm thuê|thuê nhà|thuê nguyên căn|\bcho thue\b|\bcan thue\b|\btim thue\b|\bthue nha\b|/tháng|/thang|mỗi tháng|moi thang|per month"
-    sale_pattern = r"bán|cần bán|chuyển nhượng|sang nhượng|ban nha|can ban|chuyen nhuong"
-    rental_title = title_text.str.contains(rent_pattern, regex=True, na=False)
-    explicit_sale = all_text.str.contains(sale_pattern, regex=True, na=False)
-    # Tin có tiêu đề cho thuê luôn bị loại; tin bán có nhắc hợp đồng thuê trong mô tả vẫn được giữ.
-    df = df.loc[~rental_title & (explicit_sale | ~all_text.str.contains(rent_pattern, regex=True, na=False))].copy()
-
-    # Xóa trùng trước khi xử lý giá.
+    # Xóa trùng lặp
     df = df.drop_duplicates()
+
+    # Xử lý số liệu giá và diện tích
     df["price"] = pd.to_numeric(df["price"], errors="coerce")
     df["area"] = pd.to_numeric(df["area"], errors="coerce")
     df = df.dropna(subset=["price", "area"])
-    df = df[(df["price"] >= 100_000_000) & (df["price"] <= 200_000_000_000)]
-    df = df[(df["area"] >= 10) & (df["area"] <= 1_000)]
-    df["price_per_m2"] = df["price"] / df["area"]
-    df = df[df["price_per_m2"].between(5_000_000, 1_000_000_000)]
+    df = df[(df["price"] > 0) & (df["area"] > 0)]
 
-    # Loại phần đuôi bất thường theo log giá/m² (0,5% mỗi phía), tránh IQR
-    # quá gắt làm mất các căn nhà ở phân khúc cao/thấp hợp lệ.
+    title_text = df["title"].fillna("").astype(str).str.lower()
+    rent_pattern = r"cho thuê|cần thuê|tìm thuê|thuê nhà|thuê nguyên căn|\bcho thue\b|\bcan thue\b|\btim thue\b|\bthue nha\b|/tháng|/thang|mỗi tháng|moi thang|per month"
+    rental_title = title_text.str.contains(rent_pattern, regex=True, na=False)
+
+    if mode == "sale":
+        # Lọc tin bán nhà toàn quốc: loại tin thuê theo tiêu đề, giá từ 100 triệu đến 200 tỷ, diện tích 10 - 1000m²
+        df = df.loc[~rental_title].copy()
+        df = df[(df["price"] >= 100_000_000) & (df["price"] <= 500_000_000_000)]
+        df = df[(df["area"] >= 10) & (df["area"] <= 2_000)]
+        df["price_per_m2"] = df["price"] / df["area"]
+        df = df[df["price_per_m2"].between(5_000_000, 3_000_000_000)]
+    elif mode == "rent":
+        # Lọc tin cho thuê toàn quốc: giá < 100 triệu
+        df = df[(df["price"] >= 500_000) & (df["price"] < 100_000_000)]
+        df = df[(df["area"] >= 10) & (df["area"] <= 1_000)]
+        df["price_per_m2"] = df["price"] / df["area"]
+    elif mode == "all":
+        # Toàn bộ dataset mới: hỗ trợ đầy đủ các phân khúc giá từ 500 nghìn đến 200 tỷ, diện tích 10 - 2000m²
+        df = df[(df["price"] >= 500_000) & (df["price"] <= 200_000_000_000)]
+        df = df[(df["area"] >= 10) & (df["area"] <= 2_000)]
+        df["price_per_m2"] = df["price"] / df["area"]
+    else:
+        # Fallback an toàn nếu mode không xác định
+        df["price_per_m2"] = df["price"] / df["area"]
+
+    # Loại phần đuôi bất thường theo log giá/m² (0,5% mỗi phía)
     log_ppm = np.log(df["price_per_m2"])
     if len(df) >= 100:
         low, high = log_ppm.quantile([0.005, 0.995])
         df = df[log_ppm.between(low, high)].copy()
-
-    df["location"] = df["location"].apply(normalize_city)
-    df["ward"] = df["ward"].apply(normalize_ward)
-    df = df[(df["location"] != "") & (df["ward"] != "")]
-    # Chuẩn hóa toàn bộ dữ liệu về một tên thành phố duy nhất.
-    df["location"] = "Tp Hồ Chí Minh"
 
     for col in ("rooms", "toilets"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -143,14 +145,14 @@ def get_estimator(algorithm: str, n_estimators: int, max_depth: int):
     elif algorithm == "gradient_boosting":
         return GradientBoostingRegressor(
             n_estimators=n_estimators, max_depth=max_depth,
-            learning_rate=0.05, subsample=0.8,
-            min_samples_leaf=5, random_state=42,
+            learning_rate=0.08, subsample=0.8,
+            min_samples_leaf=1, random_state=42,
         )
     elif algorithm == "random_forest":
         return RandomForestRegressor(
             n_estimators=n_estimators,
             max_depth=max_depth if max_depth < 20 else None,
-            min_samples_leaf=5, random_state=42, n_jobs=-1,
+            min_samples_leaf=1, random_state=42, n_jobs=-1,
         )
     elif algorithm == "ridge":
         return Ridge(alpha=10.0)
@@ -273,7 +275,7 @@ def compare_models(test_size: float = 0.2, n_estimators: int = 300,
     """So sánh mô hình trên cùng tập test theo thời gian (nếu có ngày đăng)."""
     df_raw = load_dataset()
     df_clean = clean_dataset(df_raw, mode=mode)
-    print(f"[compare] TP.HCM | Raw: {len(df_raw)} -> Clean: {len(df_clean)}")
+    print(f"[compare] Toàn quốc | Raw: {len(df_raw)} -> Clean ({mode}): {len(df_clean)}")
     if len(df_clean) < 50:
         raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {len(df_clean)} dòng.")
 
@@ -324,7 +326,7 @@ def _split_train_test(df: pd.DataFrame, test_size: float):
         dates = pd.to_datetime(df["published_at"], errors="coerce", utc=True)
         valid = dates.notna()
         if valid.sum() >= 50:
-            ordered = df.loc[valid].assign(_date=dates[valid]).sort_values("_date")
+            ordered = df.assign(_date=dates).sort_values("_date", na_position="first")
             split_at = max(1, min(len(ordered) - 1, int(len(ordered) * (1 - test_size))))
             return ordered.iloc[:split_at].drop(columns=["_date"]), ordered.iloc[split_at:].drop(columns=["_date"]), "time"
     train_df, test_df = train_test_split(df, test_size=test_size, random_state=42)
@@ -335,7 +337,9 @@ def _fit_baseline(df: pd.DataFrame):
     log_area = np.log(df["area"].to_numpy())
     log_ppm = np.log((df["price"] / df["area"]).to_numpy())
     slope, intercept, *_ = stats.linregress(log_area, log_ppm)
-    return float(slope), float(intercept)
+    # Ràng buộc slope trong (-1, 0) để đảm bảo tổng giá luôn tăng đơn điệu theo diện tích
+    bounded_slope = max(-0.25, min(-0.10, float(slope)))
+    return bounded_slope, float(intercept)
 
 
 def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
@@ -345,9 +349,9 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
     df_raw = load_dataset()
     df_clean = clean_dataset(df_raw, mode=mode)
     n_raw, n_clean = len(df_raw), len(df_clean)
-    print(f"[train] TP.HCM | Raw: {n_raw} -> Clean ({mode}): {n_clean}")
+    print(f"[train] Toàn quốc | Raw: {n_raw} -> Clean ({mode}): {n_clean}")
     if n_clean < 50:
-        raise ValueError(f"Dữ liệu TP.HCM sau làm sạch chỉ còn {n_clean} dòng; cần ít nhất 50 dòng.")
+        raise ValueError(f"Dữ liệu sau làm sạch chỉ còn {n_clean} dòng; cần ít nhất 50 dòng.")
 
     train_df, test_df, split_method = _split_train_test(df_clean, test_size)
     if len(train_df) < 25 or len(test_df) < 10:
@@ -385,10 +389,17 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
     final_pipeline = build_pipeline(get_estimator(algorithm, n_estimators, max_depth))
     final_pipeline.fit(df_clean[FEATURE_COLUMNS], final_residual)
 
-    wards = sorted(w for w in df_clean["ward"].dropna().astype(str).unique() if w.strip())
-    location_catalog = {"Tp Hồ Chí Minh": wards} if wards else {}
+        # Xây dựng danh mục địa điểm toàn diện từ toàn bộ dataset sạch
+    raw_for_cat = load_dataset()
+    for s, t in COLUMN_ALIASES.items():
+        if s in raw_for_cat.columns and t not in raw_for_cat.columns:
+            raw_for_cat[t] = raw_for_cat[s]
+    raw_for_cat["location"] = raw_for_cat["location"].apply(normalize_city)
+    raw_for_cat["ward"] = raw_for_cat["ward"].apply(normalize_ward)
+    raw_for_cat = raw_for_cat[(raw_for_cat["location"] != "") & (raw_for_cat["ward"] != "")]
+    location_catalog = build_location_catalog(raw_for_cat)
     if not location_catalog:
-        raise ValueError("Dataset không có danh mục phường/xã hợp lệ.")
+        location_catalog = build_location_catalog(df_clean)
 
     trained_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     bundle = {
@@ -401,7 +412,7 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         "accuracy": accuracy,
         "location_catalog": location_catalog,
         "trained_at": trained_at,
-        "training_region": "Tp Hồ Chí Minh",
+        "training_region": f"Toàn quốc ({len(location_catalog)} Tỉnh / Thành phố)",
         "training_rows": int(n_clean),
         "evaluation_split": split_method,
         "evaluation_r2_log": r2_log,
@@ -415,7 +426,7 @@ def train(algorithm: str = "gradient_boosting", test_size: float = 0.2,
         "  HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN",
         "=" * 58,
         f"Thời gian             : {trained_at}",
-        f"Phạm vi dữ liệu       : TP. Hồ Chí Minh",
+        f"Phạm vi dữ liệu       : Toàn quốc ({len(location_catalog)} Tỉnh / Thành phố)",
         f"Thuật toán            : {algorithm}",
         f"Chế độ                : {'Giá bán' if mode == 'sale' else 'Giá thuê'}",
         f"Phương pháp chia      : {split_method} (test {int(test_size * 100)}%)",
@@ -452,7 +463,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--algorithm",
         choices=["linear_regression", "random_forest", "gradient_boosting"],
-        default="linear_regression"
+        default="gradient_boosting"
     )
     parser.add_argument(
         "--skip-compare",

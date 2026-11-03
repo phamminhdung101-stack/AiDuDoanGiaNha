@@ -161,19 +161,23 @@ def get_admin_stats() -> dict:
     accuracy = "N/A"
     if report_path.exists():
         for line in report_path.read_text(encoding="utf-8").splitlines():
-            if "Accuracy" in line:
+            if "Accuracy" in line or "Điểm R² log quy đổi" in line:
                 try:
-                    accuracy = line.split(":")[-1].strip()
+                    accuracy = line.split(":")[-1].strip().split()[0]
                 except:
                     pass
 
-    with get_cursor() as (cursor, _):
-        cursor.execute("SELECT COUNT(*) as n FROM houses")
-        total_houses = cursor.fetchone()["n"]
-        cursor.execute("SELECT COUNT(*) as n FROM predictions")
-        total_preds  = cursor.fetchone()["n"]
-        cursor.execute("SELECT COUNT(*) as n FROM users")
-        total_users  = cursor.fetchone()["n"]
+    total_houses, total_preds, total_users = 0, 0, 0
+    try:
+        with get_cursor() as (cursor, _):
+            cursor.execute("SELECT COUNT(*) as n FROM houses")
+            total_houses = cursor.fetchone()["n"]
+            cursor.execute("SELECT COUNT(*) as n FROM predictions")
+            total_preds  = cursor.fetchone()["n"]
+            cursor.execute("SELECT COUNT(*) as n FROM users")
+            total_users  = cursor.fetchone()["n"]
+    except Exception as e:
+        print(f"[WARN] get_admin_stats DB error: {e}")
 
     return {
         "total_houses": total_houses,
@@ -184,16 +188,20 @@ def get_admin_stats() -> dict:
 
 
 def get_recent_predictions(limit: int = 8) -> list:
-    with get_cursor() as (cursor, _):
-        cursor.execute("""
-            SELECT p.id, u.username, p.city, p.district, p.area, p.pred_price, p.created_at
-            FROM predictions p
-            LEFT JOIN users u ON p.user_id = u.id
-            ORDER BY p.created_at DESC
-            LIMIT %s
-        """, (limit,))
-        rows = cursor.fetchall()
-    for r in rows:
-        if r.get("created_at"):
-            r["created_at"] = r["created_at"].strftime("%d/%m/%Y %H:%M")
-    return rows
+    try:
+        with get_cursor() as (cursor, _):
+            cursor.execute("""
+                SELECT p.id, u.username, p.city, p.district, p.area, p.pred_price, p.created_at
+                FROM predictions p
+                LEFT JOIN users u ON p.user_id = u.id
+                ORDER BY p.created_at DESC
+                LIMIT %s
+            """, (limit,))
+            rows = cursor.fetchall()
+        for r in rows:
+            if r.get("created_at"):
+                r["created_at"] = r["created_at"].strftime("%d/%m/%Y %H:%M")
+        return rows
+    except Exception as e:
+        print(f"[WARN] get_recent_predictions DB error: {e}")
+        return []

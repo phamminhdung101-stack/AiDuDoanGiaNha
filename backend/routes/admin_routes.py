@@ -109,17 +109,25 @@ def admin_train():
         model_report = report_path.read_text(encoding="utf-8")
 
     from backend.train_model import load_dataset, clean_and_split
+    from backend.location_service import get_active_location_catalog
     try:
         df_raw   = load_dataset()
-        df_clean = clean_and_split(df_raw, mode="sale")
+        df_all   = clean_and_split(df_raw, mode="all")
+        df_sale  = clean_and_split(df_raw, mode="sale")
+        df_rent  = clean_and_split(df_raw, mode="rent")
+        catalog  = get_active_location_catalog()
         train_data = {
             "total":        len(df_raw),
-            "valid":        len(df_clean),
-            "invalid":      len(df_raw) - len(df_clean),
+            "valid":        len(df_all),
+            "invalid":      len(df_raw) - len(df_all),
+            "sales_count":  len(df_sale),
+            "rents_count":  len(df_rent),
+            "cities_count": len(catalog),
             "last_updated": datetime.now().strftime("%Y-%m-%d"),
         }
-    except Exception:
-        train_data = {"total": 0, "valid": 0, "invalid": 0, "last_updated": "N/A"}
+    except Exception as e:
+        print(f"[WARN] train_data calc error: {e}")
+        train_data = {"total": 0, "valid": 0, "invalid": 0, "sales_count": 0, "rents_count": 0, "cities_count": 0, "last_updated": "N/A"}
 
     return render_template("admin/train.html",
                            train_results=train_results,

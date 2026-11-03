@@ -13,9 +13,9 @@ def index():
     report_path = ROOT_DIR / "models" / "model_report.txt"
     if report_path.exists():
         for line in report_path.read_text(encoding="utf-8").splitlines():
-            if "Accuracy" in line:
+            if "Accuracy" in line or "Điểm R² log quy đổi" in line:
                 try:
-                    model_accuracy = line.split(":")[-1].strip().replace("%", "")
+                    model_accuracy = line.split(":")[-1].strip().split("%")[0].strip()
                 except Exception:
                     pass
     return render_template("index.html", model_accuracy=model_accuracy)

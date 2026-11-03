@@ -29,7 +29,9 @@
           <div class="form-group">
             <label>Chế độ dữ liệu</label>
             <select name="mode">
-              <option value="sale">Giá bán (≥ 100 triệu) — Mặc định</option>
+              <option value="sale" selected>Giá bán nhà toàn quốc (Khuyên dùng cho định giá)</option>
+              <option value="all">Toàn bộ dataset mới (Bán & Thuê đa phân khúc — Toàn quốc)</option>
+              <option value="rent">Giá thuê nhà toàn quốc</option>
             </select>
           </div>
           <div class="form-group">
@@ -70,16 +72,24 @@
         <div class="admin-card__header"><h2><i class="ph ph-database"></i> Thông tin dữ liệu</h2></div>
         <div class="train-data-info">
           <div class="train-status__item">
-            <span class="train-label">Tổng bản ghi</span>
+            <span class="train-label">Tổng bản ghi dataset</span>
             <span class="train-val">{{ train_data.total }}</span>
           </div>
           <div class="train-status__item">
-            <span class="train-label">Bản ghi hợp lệ</span>
+            <span class="train-label">Bản ghi hợp lệ (toàn quốc)</span>
             <span class="train-val" style="color:var(--green)">{{ train_data.valid }}</span>
           </div>
           <div class="train-status__item">
-            <span class="train-label">Bản ghi lỗi</span>
-            <span class="train-val" style="color:var(--red)">{{ train_data.invalid }}</span>
+            <span class="train-label">Bản ghi thiếu địa chỉ</span>
+            <span class="train-val" style="color:var(--text-muted)">{{ train_data.invalid }}</span>
+          </div>
+          <div class="train-status__item">
+            <span class="train-label">Số Tỉnh / Thành phố</span>
+            <span class="train-val" style="color:var(--primary)">{{ train_data.cities_count }}</span>
+          </div>
+          <div class="train-status__item">
+            <span class="train-label">Tin bán nhà toàn quốc</span>
+            <span class="train-val">{{ train_data.sales_count }}</span>
           </div>
           <div class="train-status__item" style="border:none">
             <span class="train-label">Cập nhật lần cuối</span>

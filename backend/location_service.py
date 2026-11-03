@@ -61,7 +61,8 @@ CITY_CANONICAL_MAP = {
 }
 
 INVALID_TOKENS = {
-    "", "unknown", "none", "nan", "null", "undefined", "chưa rõ", "chua ro", "n/a"
+    "", "unknown", "none", "nan", "null", "undefined", "chưa rõ", "chua ro", "n/a",
+    "không có xã/phường", "không có phường/xã", "không có xã", "không có phường", "chưa có"
 }
 
 _cached_catalog: dict[str, list[str]] | None = None
