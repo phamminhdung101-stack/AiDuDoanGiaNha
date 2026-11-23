@@ -2,6 +2,8 @@ from flask import Flask
 from backend.routes.public_routes import public_bp
 from backend.routes.user_routes import user_bp
 from backend.routes.admin_routes import admin_bp
+from backend.routes.comparison_routes import comparison_bp
+from backend.routes.map_routes import map_bp
 
 
 def register_routes(app: Flask):
@@ -9,3 +11,5 @@ def register_routes(app: Flask):
     app.register_blueprint(public_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(comparison_bp)
+    app.register_blueprint(map_bp)

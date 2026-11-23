@@ -1,23 +1,23 @@
 ==========================================================
   HOUSE PRICE AI — BÁO CÁO HUẤN LUYỆN
 ==========================================================
-Thời gian             : 2026-11-03 13:41:50
+Thời gian             : 2026-11-23 14:00:19
 Phạm vi dữ liệu       : Toàn quốc (52 Tỉnh / Thành phố)
 Thuật toán            : gradient_boosting
 Chế độ                : Giá bán
-Phương pháp chia      : time (test 20%)
+Phương pháp chia      : time (test 19%)
 Dữ liệu gốc           : 19,779 bản ghi
 Dữ liệu sau làm sạch  : 6,264 bản ghi
-Tập train             : 5,011 mẫu
-Tập test              : 1,253 mẫu
+Tập train             : 5,073 mẫu
+Tập test              : 1,191 mẫu
 Số phường/xã          : 1,070
 ----------------------------------------------------------
-R² giá log            : 0.6502
-R² giá thực           : 0.3723
-Điểm R² log quy đổi   : 65.0% (không phải accuracy phân loại)
-MAE                   : 2404.9 triệu VNĐ
-RMSE                  : 8641.9 triệu VNĐ
-R² residual trên train: 0.6995
+R² giá log            : 0.6435
+R² giá thực           : 0.3720
+Điểm R² log quy đổi   : 64.4% (không phải accuracy phân loại)
+MAE                   : 2476.2 triệu VNĐ
+RMSE                  : 8826.3 triệu VNĐ
+R² residual trên train: 0.6953
 Baseline slope        : -0.2500
 Baseline intercept    : 20.1779
 ==========================================================

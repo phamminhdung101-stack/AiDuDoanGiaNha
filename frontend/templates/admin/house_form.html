@@ -1,126 +1,164 @@
 {% extends "base.html" %}
-{% block title %}{% if house %}Sửa{% else %}Thêm{% endif %} dữ liệu nhà — HouseAI Admin{% endblock %}
+{% block title %}{% if house %}Chỉnh sửa{% else %}Thêm mới{% endif %} dữ liệu nhà — HousePrice AI Admin{% endblock %}
+{% block page_title %}{% if house %}Cập nhật Dữ liệu Nhà #{{ house.id }}{% else %}Thêm Bản ghi Bất động sản Mới{% endif %}{% endblock %}
 {% block body_class %}page-admin{% endblock %}
 
 {% block content %}
-<div class="admin-layout">
-  <aside class="admin-sidebar">
-    <div class="sidebar-logo">
-      <i class="ph-fill ph-hexagon logo-icon"></i> HouseAI <span class="admin-badge">Admin</span>
+<div style="max-width:880px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <div>
+      <h2 style="font-size:22px;font-weight:800;color:#fff;">
+        {% if house %}Cập nhật thông tin bất động sản #{{ house.id }}{% else %}Biểu mẫu tạo mới dữ liệu nhà{% endif %}
+      </h2>
+      <p style="font-size:13.5px;color:var(--text-muted);">Dữ liệu được lưu trữ trực tiếp vào kho phân tích của hệ thống</p>
     </div>
-    <nav class="sidebar-nav">
-      <a href="/admin/dashboard" class="sidebar-link"><i class="ph ph-squares-four"></i> Tổng quan</a>
-      <a href="/admin/houses" class="sidebar-link active"><i class="ph ph-house"></i> Dữ liệu nhà</a>
-      <a href="/admin/train" class="sidebar-link"><i class="ph ph-brain"></i> Huấn luyện AI</a>
-      <a href="/logout" class="sidebar-link sidebar-link--danger"><i class="ph ph-sign-out"></i> Đăng xuất</a>
-    </nav>
-  </aside>
-
-  <div class="admin-main">
-    <div class="admin-topbar">
-      <h1>{% if house %}Chỉnh sửa dữ liệu nhà #{{ house.id }}{% else %}Thêm dữ liệu nhà mới{% endif %}</h1>
-      <a href="/admin/houses" class="btn btn--outline"><i class="ph ph-arrow-left"></i> Quay lại</a>
-    </div>
-
-    <div class="admin-card admin-card--form" style="max-width:800px;margin:0 auto">
-      <form method="POST" action="{% if house %}/admin/houses/edit/{{ house.id }}{% else %}/admin/houses/add{% endif %}">
-        
-        <div class="form-section">
-          <div class="form-section__label"><i class="ph ph-map-pin"></i> Vị trí</div>
-          <div class="form-group">
-            <label>Tiêu đề / Mô tả ngắn</label>
-            <input type="text" name="title" value="{{ house.title if house else '' }}" placeholder="Ví dụ: Nhà phố 3 tầng Quận 1"/>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Thành phố <span class="req">*</span></label>
-              <select name="city" required>
-                <option value="">Chọn thành phố</option>
-                {% for c in (cities or []) %}
-                <option value="{{ c }}" {% if house and house.city == c %}selected{% endif %}>{{ c }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Quận / Huyện / Phường <span class="req">*</span></label>
-              <input type="text" name="district" value="{{ house.district if house else '' }}" placeholder="Ví dụ: Quận 1, Phường 9" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Đường / Số nhà</label>
-            <input type="text" name="street" value="{{ house.street if house else '' }}" placeholder="Ví dụ: 123 Nguyễn Văn Linh"/>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section__label"><i class="ph ph-house-line"></i> Thông số nhà</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Diện tích (m²) <span class="req">*</span></label>
-              <input type="number" name="area" value="{{ house.area if house else '' }}" placeholder="80" min="1" step="0.1" required/>
-            </div>
-            <div class="form-group">
-              <label>Số tầng</label>
-              <input type="number" name="floors" value="{{ house.floors if house else '' }}" placeholder="3" min="1"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Phòng ngủ</label>
-              <input type="number" name="bedrooms" value="{{ house.bedrooms if house else '' }}" placeholder="3" min="0"/>
-            </div>
-            <div class="form-group">
-              <label>Phòng vệ sinh</label>
-              <input type="number" name="bathrooms" value="{{ house.bathrooms if house else '' }}" placeholder="2" min="0"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Loại hình</label>
-              <select name="house_type">
-                {% for t in ['','Nhà phố','Biệt thự','Chung cư','Đất nền','Nhà trọ'] %}
-                <option value="{{ t }}" {% if house and house.house_type == t %}selected{% endif %}>{{ t or 'Chọn loại hình' }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Hướng</label>
-              <select name="direction">
-                {% for d in ['','Đông','Tây','Nam','Bắc','Đông Nam','Đông Bắc','Tây Nam','Tây Bắc'] %}
-                <option value="{{ d }}" {% if house and house.direction == d %}selected{% endif %}>{{ d or 'Không xác định' }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section__label"><i class="ph ph-currency-circle-dollar"></i> Giá & pháp lý</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Giá bán (VNĐ) <span class="req">*</span></label>
-              <input type="number" name="price" value="{{ house.price if house else '' }}" placeholder="3500000" step="1" min="0" required/>
-              <span class="field-hint">Nhập theo đơn vị trong dataset CSV (thường là VNĐ)</span>
-            </div>
-            <div class="form-group">
-              <label>Pháp lý</label>
-              <select name="legal">
-                {% for l in ['','Sổ hồng','Sổ đỏ','Giấy tay','Đang chờ sổ'] %}
-                <option value="{{ l }}" {% if house and house.legal == l %}selected{% endif %}>{{ l or 'Chọn pháp lý' }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:16px;justify-content:flex-end;margin-top:32px;">
-          <a href="/admin/houses" class="btn btn--outline">Hủy</a>
-          <button type="submit" class="btn btn--primary">
-            <i class="ph ph-floppy-disk"></i> {% if house %}Lưu thay đổi{% else %}Thêm dữ liệu{% endif %}
-          </button>
-        </div>
-      </form>
-    </div>
+    <a href="/admin/houses" class="btn btn--outline btn--sm">
+      <i class="ph ph-arrow-left"></i> Quay lại danh sách
+    </a>
   </div>
+
+  <form method="POST" action="{% if house %}/admin/houses/edit/{{ house.id }}{% else %}/admin/houses/add{% endif %}">
+    <!-- SECTION 1: VỊ TRÍ -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <h3><i class="ph-fill ph-map-pin"></i> 1. Vị trí địa lý</h3>
+      </div>
+
+      <div class="form-group">
+        <label>Tiêu đề / Tên nhận diện tin</label>
+        <div class="input-wrap">
+          <i class="ph ph-subtitles input-icon-left"></i>
+          <input type="text" name="title" value="{{ house.title if house else '' }}" placeholder="Ví dụ: Nhà phố 3 tầng mặt tiền Quận 1"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tỉnh / Thành phố <span class="req">*</span></label>
+          <select name="city" required>
+            <option value="">-- Chọn thành phố --</option>
+            {% for c in (cities or []) %}
+            <option value="{{ c }}" {% if house and house.city == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Quận / Huyện / Phường <span class="req">*</span></label>
+          <div class="input-wrap">
+            <i class="ph ph-navigation-arrow input-icon-left"></i>
+            <input type="text" name="district" value="{{ house.district if house else '' }}" placeholder="Ví dụ: Quận 1, Phường Bến Nghé" required/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Đường / Tuyến phố / Số nhà</label>
+        <div class="input-wrap">
+          <i class="ph ph-signpost input-icon-left"></i>
+          <input type="text" name="street" value="{{ house.street if house else '' }}" placeholder="Ví dụ: 123 Nguyễn Huệ"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: THÔNG SỐ CÔNG TRÌNH -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <h3><i class="ph-fill ph-house-line"></i> 2. Thông số xây dựng & Thiết kế</h3>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Diện tích sử dụng (m²) <span class="req">*</span></label>
+          <div class="input-wrap">
+            <i class="ph ph-ruler input-icon-left"></i>
+            <input type="number" name="area" value="{{ house.area if house else '' }}" placeholder="85" min="1" step="0.1" required/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Số tầng công trình</label>
+          <div class="input-wrap">
+            <i class="ph ph-stack input-icon-left"></i>
+            <input type="number" name="floors" value="{{ house.floors if house else '' }}" placeholder="3" min="1"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Số phòng ngủ</label>
+          <input type="number" name="bedrooms" value="{{ house.bedrooms if house else '' }}" placeholder="3" min="0"/>
+        </div>
+
+        <div class="form-group">
+          <label>Số phòng vệ sinh (WC)</label>
+          <input type="number" name="bathrooms" value="{{ house.bathrooms if house else '' }}" placeholder="2" min="0"/>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:0;">
+        <div class="form-group">
+          <label>Loại hình bất động sản</label>
+          <select name="house_type">
+            {% for t in ['','Nhà phố','Biệt thự','Chung cư','Đất nền','Nhà trọ'] %}
+            <option value="{{ t }}" {% if house and house.house_type == t %}selected{% endif %}>{{ t or 'Chọn loại hình' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Hướng nhà</label>
+          <select name="direction">
+            {% for d in ['','Đông','Tây','Nam','Bắc','Đông Nam','Đông Bắc','Tây Nam','Tây Bắc'] %}
+            <option value="{{ d }}" {% if house and house.direction == d %}selected{% endif %}>{{ d or 'Không xác định' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: GIÁ & PHÁP LÝ -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <h3><i class="ph-fill ph-currency-circle-dollar"></i> 3. Giá bán & Pháp lý</h3>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Giá niêm yết (VNĐ) <span class="req">*</span></label>
+          <div class="input-wrap">
+            <i class="ph ph-coin input-icon-left"></i>
+            <input type="number" name="price" value="{{ house.price if house else '' }}" placeholder="Ví dụ: 8500000000 (8.5 Tỷ)" min="0" step="1000000" required/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Mặt tiền (m)</label>
+          <input type="number" name="frontage" value="{{ house.frontage if house else '' }}" placeholder="5.5" min="0" step="0.1"/>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:0;">
+        <div class="form-group">
+          <label>Độ rộng đường trước nhà (m)</label>
+          <input type="number" name="road_width" value="{{ house.road_width if house else '' }}" placeholder="8" min="0" step="0.1"/>
+        </div>
+
+        <div class="form-group">
+          <label>Tình trạng pháp lý</label>
+          <input type="text" name="legal" value="{{ house.legal if house else '' }}" placeholder="Ví dụ: Sổ hồng riêng chính chủ"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div style="display:flex;gap:16px;">
+      <button type="submit" class="btn btn--primary btn--lg" style="flex:1;">
+        <i class="ph-bold ph-floppy-disk"></i> {% if house %}Cập nhật thông tin{% else %}Lưu bản ghi mới{% endif %}
+      </button>
+      <a href="/admin/houses" class="btn btn--outline btn--lg">Hủy bỏ</a>
+    </div>
+  </form>
 </div>
 {% endblock %}

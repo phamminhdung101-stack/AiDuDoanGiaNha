@@ -3,57 +3,210 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}HouseAI{% endblock %}</title>
-  
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <title>{% block title %}HousePrice AI — Nền tảng AI Dự đoán Giá nhà Cao cấp{% endblock %}</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Chart.js for AI Dashboards -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main Dark Theme Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
 
-<nav class="navbar">
-  <a href="/" class="nav-logo">
-    <i class="ph-fill ph-hexagon logo-icon"></i>
-    <span>HouseAI</span>
-  </a>
-  <div class="nav-links">
-    {% if session.get('user_id') %}
-      <span class="nav-user"><i class="ph ph-user-circle"></i> {{ session.get('fullname', session.get('username')) }}</span>
-      <a href="/predict" class="nav-link {% if request.path == '/predict' %}active{% endif %}">Dự đoán</a>
-      <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}">Lịch sử</a>
-      <a href="/logout" class="nav-btn nav-btn--ghost">Đăng xuất</a>
-    {% elif session.get('admin') %}
-      <a href="/admin/dashboard" class="nav-link">Dashboard</a>
-      <a href="/logout" class="nav-btn nav-btn--ghost">Đăng xuất</a>
-    {% else %}
-      <a href="/login" class="nav-link">Đăng nhập</a>
-      <a href="/register" class="nav-btn">Đăng ký</a>
-    {% endif %}
-  </div>
-</nav>
+<!-- FLASH MESSAGES (GLOBAL) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for cat, msg in messages %}
+      <div class="flash flash--{{ cat }}" onclick="this.remove()">
+        {% if cat == 'success' %}
+          <i class="ph-fill ph-check-circle flash-icon"></i>
+        {% elif cat == 'error' %}
+          <i class="ph-fill ph-warning-circle flash-icon"></i>
+        {% else %}
+          <i class="ph-fill ph-info flash-icon"></i>
+        {% endif %}
+        <span>{{ msg }}</span>
+        <i class="ph ph-x flash-close"></i>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-<main>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for cat, msg in messages %}
-        <div class="flash flash--{{ cat }}" onclick="this.remove()">
-          {% if cat == 'success' %}
-            <i class="ph-fill ph-check-circle flash-icon"></i>
-          {% elif cat == 'error' %}
-            <i class="ph-fill ph-warning-circle flash-icon"></i>
-          {% else %}
-            <i class="ph-fill ph-info flash-icon"></i>
-          {% endif %}
-          <span>{{ msg }}</span>
-          <i class="ph ph-x flash-close"></i>
+{% if 'page-auth' not in self.body_class() %}
+<!-- ================= APP SHELL (DARK AI DASHBOARD) ================= -->
+<div class="app-shell">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <a href="/" class="brand-link">
+        <div class="brand-logo-icon">
+          <i class="ph-fill ph-sparkle"></i>
         </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+        <div class="brand-text">
+          <span class="brand-name">House<span>Price AI</span></span>
+          <span class="brand-tag">Deep Learning Hub</span>
+        </div>
+      </a>
+      <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Thu gọn / Mở rộng">
+        <i class="ph ph-sidebar-simple"></i>
+      </button>
+    </div>
 
-  {% block content %}{% endblock %}
-</main>
+    <div class="sidebar-body">
+      <!-- Main Navigation Group -->
+      <div class="nav-group">
+        <div class="nav-group-label">Định giá & Phân tích</div>
+        <nav class="sidebar-nav">
+          <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+            <i class="ph ph-squares-four"></i>
+            <span>Dashboard AI</span>
+          </a>
+          <a href="/predict" class="nav-item {% if request.path == '/predict' %}active{% endif %}">
+            <i class="ph ph-magic-wand"></i>
+            <span>Dự đoán giá nhà</span>
+            <span class="nav-badge">AI v2.4</span>
+          </a>
+          <a href="/compare" class="nav-item {% if request.path == '/compare' %}active{% endif %}">
+            <i class="ph ph-chart-bar"></i>
+            <span>So sánh giá nhà</span>
+          </a>
+          <a href="/map" class="nav-item {% if request.path == '/map' %}active{% endif %}">
+            <i class="ph ph-map-trifold"></i>
+            <span>Bản đồ giá BĐS</span>
+            <span class="nav-badge" style="background:var(--accent-cyan);color:#080D1A;font-weight:800;">Maps</span>
+          </a>
+          <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
+            <i class="ph ph-clock-counter-clockwise"></i>
+            <span>Lịch sử định giá</span>
+          </a>
+        </nav>
+      </div>
 
+      {% if session.get('admin') %}
+      <!-- Admin Navigation Group -->
+      <div class="nav-group">
+        <div class="nav-group-label">Quản trị hệ thống</div>
+        <nav class="sidebar-nav">
+          <a href="/admin/dashboard" class="nav-item {% if request.path == '/admin/dashboard' %}active{% endif %}">
+            <i class="ph ph-chart-pie-slice"></i>
+            <span>Tổng quan Admin</span>
+          </a>
+          <a href="/admin/houses" class="nav-item {% if '/admin/houses' in request.path %}active{% endif %}">
+            <i class="ph ph-house"></i>
+            <span>Dữ liệu nhà ở</span>
+          </a>
+          <a href="/admin/train" class="nav-item {% if request.path == '/admin/train' %}active{% endif %}">
+            <i class="ph ph-cpu"></i>
+            <span>Huấn luyện AI</span>
+            <span class="nav-badge" style="background:var(--accent-purple)">Train</span>
+          </a>
+        </nav>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar Footer (Account Profile or Auth Links) -->
+    <div class="sidebar-footer">
+      {% if session.get('admin') %}
+        <div class="user-profile-card">
+          <div class="user-avatar admin-avatar">
+            <i class="ph ph-shield-star"></i>
+          </div>
+          <div class="user-info">
+            <span class="user-name">{{ session.get('admin') }}</span>
+            <span class="user-role-badge admin-role"><i class="ph-fill ph-circle"></i> Quản trị viên</span>
+          </div>
+          <a href="/logout" class="logout-icon-btn" title="Đăng xuất"><i class="ph ph-sign-out"></i></a>
+        </div>
+      {% elif session.get('user_id') %}
+        <div class="user-profile-card">
+          <div class="user-avatar">
+            {{ (session.get('fullname') or session.get('username') or 'U')[:1] | upper }}
+          </div>
+          <div class="user-info">
+            <span class="user-name">{{ session.get('fullname', session.get('username')) }}</span>
+            <span class="user-role-badge"><i class="ph-fill ph-circle"></i> Thành viên</span>
+          </div>
+          <a href="/logout" class="logout-icon-btn" title="Đăng xuất"><i class="ph ph-sign-out"></i></a>
+        </div>
+      {% else %}
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="/login" class="btn btn--outline btn--sm btn--full"><i class="ph ph-sign-in"></i> Đăng nhập</a>
+          <a href="/register" class="btn btn--primary btn--sm btn--full"><i class="ph ph-user-plus"></i> Tạo tài khoản</a>
+        </div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- MAIN APP VIEW -->
+  <div class="app-main" id="appMain">
+    <!-- TOPBAR -->
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <button type="button" class="mobile-sidebar-toggle" id="mobileSidebarToggle" title="Mở menu">
+          <i class="ph ph-list"></i>
+        </button>
+        <div class="topbar-title-wrap">
+          <h1>{% block page_title %}AI Analytics Dashboard{% endblock %}</h1>
+          <span class="topbar-subtitle">Hệ thống phân tích & định giá bất động sản tự động</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="system-status-pill">
+          <span class="status-dot"></span>
+          <span>Gradient Boosting v2.4</span>
+        </div>
+
+        <a href="/predict" class="topbar-cta">
+          <i class="ph-bold ph-plus"></i>
+          <span>Dự đoán mới</span>
+        </a>
+
+        {% if not session.get('user_id') and not session.get('admin') %}
+          <a href="/login" class="btn btn--ghost btn--sm">Đăng nhập</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="app-content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- SMALL APP FOOTER -->
+    <footer style="padding:20px 32px;border-top:1px solid var(--border);color:var(--text-dim);font-size:12.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div>HousePrice AI &copy; 2026 — Modern Real Estate Intelligence Engine.</div>
+      <div style="display:flex;gap:16px;">
+        <a href="/" style="color:var(--text-muted)">Dashboard</a>
+        <a href="/predict" style="color:var(--text-muted)">Dự đoán</a>
+        <a href="/compare" style="color:var(--text-muted)">So sánh giá</a>
+        <a href="/map" style="color:var(--text-muted)">Bản đồ BĐS</a>
+        <a href="/history" style="color:var(--text-muted)">Lịch sử</a>
+      </div>
+    </footer>
+  </div>
+</div>
+
+{% else %}
+  <!-- AUTH FULLPAGE CONTENT -->
+  {% block auth_content %}
+    {{ self.content() }}
+  {% endblock %}
+{% endif %}
+
+<!-- Javascript Core -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block extra_js %}{% endblock %}
 </body>

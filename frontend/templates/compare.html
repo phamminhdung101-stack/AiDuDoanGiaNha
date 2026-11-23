@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+{% block title %}So sánh giá nhà giữa các khu vực — HousePrice AI Platform{% endblock %}
+{% block page_title %}So sánh Giá Bất động sản Đa Khu vực{% endblock %}
+{% block body_class %}page-compare{% endblock %}
+
+{% block content %}
+<div class="compare-container">
+  <!-- TOP TOOLBAR: AREA SELECTOR -->
+  <div class="card" style="margin-bottom:28px;">
+    <div class="card-header">
+      <h2><i class="ph-fill ph-scales" style="color:var(--accent-blue);"></i> Bộ chọn Khu vực Phân tích So sánh</h2>
+      <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Hỗ trợ tối đa 5 khu vực đồng thời</span>
+    </div>
+
+    <!-- Quick Presets -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <span style="font-size:12.5px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Gợi ý so sánh nhanh:</span>
+      <button type="button" class="btn btn--ghost btn--xs" onclick="applyPreset('Tp Hồ Chí Minh', ['Quận 7', 'Quận Bình Thạnh', 'Thành phố Thủ Đức', 'Quận Bình Tân'])" style="border:1px solid var(--border);border-radius:var(--radius-full);">
+        <i class="ph-fill ph-lightning" style="color:var(--accent-amber);"></i> 4 Khu vực sôi động TP.HCM
+      </button>
+      <button type="button" class="btn btn--ghost btn--xs" onclick="applyPreset('Tp Hồ Chí Minh', ['Quận 1', 'Quận 3', 'Quận 10', 'Quận Phú Nhuận'])" style="border:1px solid var(--border);border-radius:var(--radius-full);">
+        <i class="ph-fill ph-buildings" style="color:var(--accent-cyan);"></i> Lõi Trung tâm TP.HCM
+      </button>
+      <button type="button" class="btn btn--ghost btn--xs" onclick="applyPreset('Hà Nội', ['Quận Cầu Giấy', 'Quận Đống Đa', 'Quận Nam Từ Liêm', 'Quận Hoàng Mai'])" style="border:1px solid var(--border);border-radius:var(--radius-full);">
+        <i class="ph-fill ph-map-pin" style="color:var(--accent-purple);"></i> Hà Nội Đô thị Mới
+      </button>
+    </div>
+
+    <!-- Area Selection Controls -->
+    <div class="form-row" style="align-items:flex-end;margin-bottom:18px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Tỉnh / Thành phố</label>
+        <select id="compareProvinceSelect" onchange="onProvinceChange()">
+          {% for p in provinces %}
+          <option value="{{ p }}" {% if p == default_province %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Quận / Huyện</label>
+        <select id="compareDistrictSelect">
+          <option value="">-- Chọn Quận / Huyện --</option>
+          {% for d in districts %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;gap:10px;height:46px;">
+        <button type="button" class="btn btn--outline" onclick="addSelectedDistrict()" id="btnAddDistrict" style="height:100%;">
+          <i class="ph-bold ph-plus"></i> Thêm khu vực
+        </button>
+        <button type="button" class="btn btn--primary" onclick="runComparison()" id="btnRunCompare" style="height:100%;">
+          <i class="ph-bold ph-sparkle"></i> Phân tích So sánh
+        </button>
+      </div>
+    </div>
+
+    <!-- Selected Areas Badges -->
+    <div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">
+        Khu vực đang chọn (<span id="selectedCountText">0/5</span>):
+      </div>
+      <div id="selectedAreasList" style="display:flex;gap:10px;flex-wrap:wrap;min-height:36px;">
+        <!-- Filled dynamically by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING SPINNER -->
+  <div id="compareLoading" style="display:none;text-align:center;padding:50px 20px;">
+    <div style="font-size:36px;color:var(--accent-blue);margin-bottom:12px;">
+      <i class="ph ph-spinner" style="animation:spin 1s linear infinite;display:inline-block;"></i>
+    </div>
+    <div style="font-size:15px;font-weight:600;color:var(--text-main);">Đang truy vấn cơ sở dữ liệu và tổng hợp số liệu so sánh...</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-top:4px;">Phân tích tương quan giá trị, đơn vị diện tích và chỉ số phân vị</div>
+  </div>
+
+  <!-- COMPARISON RESULTS VIEW -->
+  <div id="compareResultsWrap" style="display:none;">
+    <!-- SECTION 1: STATS SUMMARY CARDS -->
+    <div style="margin-bottom:28px;">
+      <h3 style="font-size:18px;font-weight:800;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+        <i class="ph-fill ph-chart-line-up" style="color:var(--accent-cyan);"></i> Thẻ Thống kê So sánh Tổng quan
+      </h3>
+      <div id="compareStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;">
+        <!-- Dynamically rendered area stat cards -->
+      </div>
+    </div>
+
+    <!-- SECTION 2: COMPARISON CHARTS (2x2 GRID) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;">
+      <!-- Chart 1: Average Price -->
+      <div class="card card--glow-blue">
+        <div class="card-header">
+          <h2><i class="ph-fill ph-currency-circle-dollar" style="color:var(--accent-blue);"></i> Giá nhà Trung bình</h2>
+          <span style="font-size:12px;color:var(--text-dim);">Đơn vị: Tỷ VNĐ</span>
+        </div>
+        <div style="height:280px;position:relative;">
+          <canvas id="chartAvgPrice"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Price Per m2 -->
+      <div class="card card--glow-cyan">
+        <div class="card-header">
+          <h2><i class="ph-fill ph-ruler" style="color:var(--accent-cyan);"></i> Đơn giá trung bình trên mỗi m²</h2>
+          <span style="font-size:12px;color:var(--text-dim);">Đơn vị: Triệu VNĐ/m²</span>
+        </div>
+        <div style="height:280px;position:relative;">
+          <canvas id="chartPpm"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Price Distribution (Low, Med, High) -->
+      <div class="card card--glow-purple">
+        <div class="card-header">
+          <h2><i class="ph-fill ph-chart-bar" style="color:var(--accent-purple);"></i> Phân vị khoảng giá (Thấp &bull; Trung vị &bull; Cao)</h2>
+          <span style="font-size:12px;color:var(--text-dim);">Tỷ VNĐ</span>
+        </div>
+        <div style="height:280px;position:relative;">
+          <canvas id="chartPriceRange"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 4: Sample Representativeness -->
+      <div class="card card--glow-amber">
+        <div class="card-header">
+          <h2><i class="ph-fill ph-database" style="color:var(--accent-amber);"></i> Số lượng mẫu dữ liệu thị trường</h2>
+          <span style="font-size:12px;color:var(--text-dim);">Số lượng tin đăng</span>
+        </div>
+        <div style="height:280px;position:relative;">
+          <canvas id="chartSamples"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: DETAILED COMPARISON TABLE -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:28px;">
+      <div class="table-toolbar">
+        <h2><i class="ph-fill ph-table" style="color:var(--accent-blue);"></i> Bảng đối chiếu chỉ số chi tiết</h2>
+        <button type="button" class="btn btn--outline btn--sm" onclick="exportComparisonTable()">
+          <i class="ph ph-printer"></i> In báo cáo
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="admin-table" id="comparisonTable">
+          <thead id="comparisonTableHead">
+            <!-- Headers filled dynamically -->
+          </thead>
+          <tbody id="comparisonTableBody">
+            <!-- Rows filled dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECTION 4: AUTOMATED MARKET INSIGHTS -->
+    <div class="card card--glow-green" style="background:linear-gradient(135deg, rgba(23, 35, 59, 0.95) 0%, rgba(16, 27, 48, 0.9) 100%);border-left:4px solid var(--accent-green);">
+      <div class="card-header" style="border-bottom:none;padding-bottom:0;margin-bottom:14px;">
+        <h2 style="color:#fff;display:flex;align-items:center;gap:10px;">
+          <i class="ph-fill ph-sparkle" style="color:var(--accent-green);font-size:22px;"></i>
+          Nhận xét & Đánh giá Tự động từ Trí tuệ Nhân tạo
+        </h2>
+        <span style="font-size:12px;color:var(--accent-green);font-weight:700;background:rgba(16,185,129,0.15);padding:4px 10px;border-radius:var(--radius-full);">
+          AI Insights Engine
+        </span>
+      </div>
+      <div id="compareInsightsList" style="display:flex;flex-direction:column;gap:12px;padding:0 4px 6px;">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// State Management for Comparison
+let selectedDistricts = {{ initial_districts | tojson }};
+const MAX_AREAS = 5;
+const AREA_PALETTE = ['#3B82F6', '#8B5CF6', '#06B6D4', '#F59E0B', '#10B981'];
+
+let charts = {
+  avgPrice: null,
+  ppm: null,
+  priceRange: null,
+  samples: null
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSelectedBadges();
+  if (selectedDistricts.length > 0) {
+    runComparison();
+  }
+});
+
+// Switch Province -> Load Districts
+function onProvinceChange() {
+  const prov = document.getElementById('compareProvinceSelect').value;
+  const distSelect = document.getElementById('compareDistrictSelect');
+  distSelect.innerHTML = '<option value="">Đang tải danh sách...</option>';
+
+  fetch(`/api/areas/districts?province=${encodeURIComponent(prov)}`)
+    .then(r => r.json())
+    .then(data => {
+      distSelect.innerHTML = '<option value="">-- Chọn Quận / Huyện --</option>';
+      if (data.success && data.districts) {
+        data.districts.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          distSelect.appendChild(opt);
+        });
+      }
+      // Reset selected districts for new province
+      selectedDistricts = [];
+      renderSelectedBadges();
+      document.getElementById('compareResultsWrap').style.display = 'none';
+    })
+    .catch(err => {
+      console.error('Lỗi tải quận huyện:', err);
+      distSelect.innerHTML = '<option value="">Lỗi tải danh mục</option>';
+    });
+}
+
+function addSelectedDistrict() {
+  const distSelect = document.getElementById('compareDistrictSelect');
+  const val = distSelect.value.trim();
+  if (!val) {
+    alert('Vui lòng chọn một quận/huyện từ danh sách.');
+    return;
+  }
+  if (selectedDistricts.includes(val)) {
+    alert('Khu vực này đã có trong danh sách so sánh.');
+    return;
+  }
+  if (selectedDistricts.length >= MAX_AREAS) {
+    alert(`Chỉ được chọn tối đa ${MAX_AREAS} khu vực để đảm bảo tính trực quan.`);
+    return;
+  }
+
+  selectedDistricts.push(val);
+  renderSelectedBadges();
+}
+
+function removeDistrict(name) {
+  selectedDistricts = selectedDistricts.filter(d => d !== name);
+  renderSelectedBadges();
+  if (selectedDistricts.length > 0) {
+    runComparison();
+  } else {
+    document.getElementById('compareResultsWrap').style.display = 'none';
+  }
+}
+
+function applyPreset(province, districtList) {
+  const provSelect = document.getElementById('compareProvinceSelect');
+  provSelect.value = province;
+  
+  fetch(`/api/areas/districts?province=${encodeURIComponent(province)}`)
+    .then(r => r.json())
+    .then(data => {
+      const distSelect = document.getElementById('compareDistrictSelect');
+      distSelect.innerHTML = '<option value="">-- Chọn Quận / Huyện --</option>';
+      if (data.success && data.districts) {
+        data.districts.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          distSelect.appendChild(opt);
+        });
+      }
+      selectedDistricts = districtList.filter(d => data.districts.includes(d));
+      renderSelectedBadges();
+      runComparison();
+    });
+}
+
+function renderSelectedBadges() {
+  const container = document.getElementById('selectedAreasList');
+  const countText = document.getElementById('selectedCountText');
+  container.innerHTML = '';
+  countText.textContent = `${selectedDistricts.length}/${MAX_AREAS}`;
+
+  if (selectedDistricts.length === 0) {
+    container.innerHTML = '<span style="font-size:13px;color:var(--text-dim);font-style:italic;">Chưa chọn khu vực nào. Hãy chọn khu vực ở trên và bấm "Thêm khu vực".</span>';
+    return;
+  }
+
+  selectedDistricts.forEach((d, idx) => {
+    const color = AREA_PALETTE[idx % AREA_PALETTE.length];
+    const badge = document.createElement('div');
+    badge.style.cssText = `display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:var(--radius-full);background:${color}22;border:1px solid ${color}66;color:#fff;font-size:13px;font-weight:600;`;
+    badge.innerHTML = `
+      <span style="width:8px;height:8px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};"></span>
+      <span>${d}</span>
+      <button type="button" onclick="removeDistrict('${d}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;display:flex;align-items:center;padding:0;" title="Xóa khu vực">&times;</button>
+    `;
+    container.appendChild(badge);
+  });
+}
+
+function runComparison() {
+  if (selectedDistricts.length === 0) {
+    alert('Vui lòng chọn ít nhất 1 khu vực để thực hiện so sánh.');
+    return;
+  }
+
+  const province = document.getElementById('compareProvinceSelect').value;
+  const loading = document.getElementById('compareLoading');
+  const results = document.getElementById('compareResultsWrap');
+
+  loading.style.display = 'block';
+  results.style.display = 'none';
+
+  fetch('/api/areas/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ province: province, districts: selectedDistricts })
+  })
+    .then(r => r.json())
+    .then(data => {
+      loading.style.display = 'none';
+      if (!data.success) {
+        alert(data.error || 'Có lỗi xảy ra khi thực hiện so sánh.');
+        return;
+      }
+      renderComparisonUI(data);
+      results.style.display = 'block';
+    })
+    .catch(err => {
+      loading.style.display = 'none';
+      alert('Lỗi kết nối máy chủ: ' + err);
+    });
+}
+
+function renderComparisonUI(data) {
+  // 1. Render Summary Cards
+  const statsGrid = document.getElementById('compareStatsGrid');
+  statsGrid.innerHTML = '';
+
+  data.areas.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = `border-top:4px solid ${a.color};position:relative;background:var(--bg-card);`;
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h4 style="font-size:16px;font-weight:800;color:#fff;display:flex;align-items:center;gap:6px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${a.color};"></span>
+          ${a.name}
+        </h4>
+        <span style="font-size:11px;font-weight:700;color:${a.color};background:${a.color_sub};padding:3px 8px;border-radius:var(--radius-full);">
+          ${a.count} tin đăng
+        </span>
+      </div>
+
+      <div style="margin-bottom:14px;padding:12px;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:11.5px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.8px;margin-bottom:2px;">Giá TB</div>
+        <div style="font-size:22px;font-weight:900;color:${a.color};font-family:var(--font-mono);">${a.price_formatted}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
+          <span style="color:var(--text-muted);">Đơn giá m²</span>
+          <span style="font-weight:700;color:#fff;font-family:var(--font-mono);">${a.ppm_formatted}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:6px;">
+          <span style="color:var(--text-muted);">Biên độ khoảng giá</span>
+          <span style="font-weight:600;color:var(--accent-cyan);font-family:var(--font-mono);">${a.min_formatted} &ndash; ${a.max_formatted}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-muted);">Diện tích TB</span>
+          <span style="font-weight:600;color:#fff;font-family:var(--font-mono);">${a.area_formatted}</span>
+        </div>
+      </div>
+
+      ${a.sample_warning ? `
+        <div style="margin-top:10px;padding:8px 10px;border-radius:var(--radius-sm);background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--accent-amber);font-size:11px;display:flex;align-items:center;gap:6px;">
+          <i class="ph-fill ph-warning"></i> ${a.sample_warning}
+        </div>
+      ` : ''}
+    `;
+    statsGrid.appendChild(card);
+  });
+
+  // 2. Render Charts (Chart.js)
+  renderCharts(data.charts);
+
+  // 3. Render Detailed Comparison Table
+  renderTable(data.areas);
+
+  // 4. Render AI Automated Insights
+  renderInsights(data.insights);
+}
+
+function renderCharts(chartsData) {
+  const chartConfig = (ctxId, data, title, isCurrency=false) => {
+    const canvas = document.getElementById(ctxId);
+    if (!canvas) return null;
+    const ctx = canvas.getContext('2d');
+
+    return new Chart(ctx, {
+      type: 'bar',
+      data: data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: data.datasets.length > 1,
+            position: 'top',
+            labels: { color: '#94A3B8', font: { size: 11, weight: 600 } }
+          },
+          tooltip: {
+            backgroundColor: '#101B30',
+            borderColor: '#293750',
+            borderWidth: 1,
+            titleColor: '#F1F5F9',
+            bodyColor: '#94A3B8',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(c) {
+                return ` ${c.dataset.label}: ${c.raw}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false, color: '#293750' },
+            ticks: { color: '#94A3B8', font: { size: 11, weight: 600 } }
+          },
+          y: {
+            grid: { color: 'rgba(41, 55, 80, 0.4)' },
+            ticks: { color: '#94A3B8', font: { size: 11 } }
+          }
+        }
+      }
+    });
+  };
+
+  // Destroy previous instances if any
+  if (charts.avgPrice) charts.avgPrice.destroy();
+  if (charts.ppm) charts.ppm.destroy();
+  if (charts.priceRange) charts.priceRange.destroy();
+  if (charts.samples) charts.samples.destroy();
+
+  charts.avgPrice = chartConfig('chartAvgPrice', chartsData.avg_price, 'Giá nhà TB (Tỷ)');
+  charts.ppm = chartConfig('chartPpm', chartsData.price_per_m2, 'Đơn giá m² (Triệu)');
+  charts.priceRange = chartConfig('chartPriceRange', chartsData.price_range, 'Phân vị giá');
+  charts.samples = chartConfig('chartSamples', chartsData.samples, 'Số lượng mẫu');
+}
+
+function renderTable(areas) {
+  const thead = document.getElementById('comparisonTableHead');
+  const tbody = document.getElementById('comparisonTableBody');
+
+  let headHtml = '<tr><th style="width:220px;">Tiêu chí so sánh</th>';
+  areas.forEach(a => {
+    headHtml += `
+      <th style="color:${a.color};font-weight:800;border-bottom:2px solid ${a.color};">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${a.color};margin-right:6px;"></span>
+        ${a.name}
+      </th>
+    `;
+  });
+  headHtml += '</tr>';
+  thead.innerHTML = headHtml;
+
+  const rows = [
+    { label: 'Giá nhà trung bình', key: 'price_formatted', highlight: true },
+    { label: 'Giá trung vị (Median)', key: 'median_formatted' },
+    { label: 'Giá thấp nhất ghi nhận', key: 'min_formatted' },
+    { label: 'Giá cao nhất ghi nhận', key: 'max_formatted' },
+    { label: 'Đơn giá trung bình / m²', key: 'ppm_formatted', highlight: true },
+    { label: 'Diện tích trung bình', key: 'area_formatted' },
+    { label: 'Số lượng mẫu dữ liệu', key: 'count', badge: true },
+  ];
+
+  let bodyHtml = '';
+  rows.forEach(r => {
+    bodyHtml += `<tr><td style="font-weight:600;color:var(--text-muted);">${r.label}</td>`;
+    areas.forEach(a => {
+      let val = a[r.key];
+      if (r.badge) {
+        bodyHtml += `<td><span class="tag-type" style="color:${a.color};border-color:${a.color}44;">${val} tin</span></td>`;
+      } else if (r.highlight) {
+        bodyHtml += `<td style="font-weight:800;color:${a.color};font-family:var(--font-mono);font-size:15px;">${val}</td>`;
+      } else {
+        bodyHtml += `<td style="color:#fff;font-family:var(--font-mono);">${val}</td>`;
+      }
+    });
+    bodyHtml += '</tr>';
+  });
+  tbody.innerHTML = bodyHtml;
+}
+
+function renderInsights(insights) {
+  const container = document.getElementById('compareInsightsList');
+  container.innerHTML = '';
+
+  insights.forEach(item => {
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:var(--radius);background:var(--bg-input);border:1px solid var(--border);`;
+    
+    let iconColor = 'var(--accent-blue)';
+    if (item.type === 'ppm') iconColor = 'var(--accent-cyan)';
+    if (item.type === 'supply') iconColor = 'var(--accent-purple)';
+    if (item.type === 'warn') iconColor = 'var(--accent-amber)';
+
+    div.innerHTML = `
+      <div style="font-size:20px;color:${iconColor};flex-shrink:0;margin-top:2px;">
+        <i class="ph-fill ${item.icon}"></i>
+      </div>
+      <div style="font-size:13.5px;color:var(--text-main);line-height:1.6;">${item.text}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function exportComparisonTable() {
+  window.print();
+}
+</script>
+{% endblock %}

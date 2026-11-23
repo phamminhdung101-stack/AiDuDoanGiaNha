@@ -1,137 +1,126 @@
 {% extends "base.html" %}
-{% block title %}Huấn luyện mô hình AI — HouseAI Admin{% endblock %}
+{% block title %}Huấn luyện mô hình AI — HousePrice AI Admin{% endblock %}
+{% block page_title %}Cấu hình & Huấn luyện Mô hình Machine Learning{% endblock %}
 {% block body_class %}page-admin{% endblock %}
 
 {% block content %}
-<div class="admin-layout">
-  <aside class="admin-sidebar">
-    <div class="sidebar-logo">
-      <i class="ph-fill ph-hexagon logo-icon"></i> HouseAI <span class="admin-badge">Admin</span>
-    </div>
-    <nav class="sidebar-nav">
-      <a href="/admin/dashboard" class="sidebar-link"><i class="ph ph-squares-four"></i> Tổng quan</a>
-      <a href="/admin/houses" class="sidebar-link"><i class="ph ph-house"></i> Dữ liệu nhà</a>
-      <a href="/admin/train" class="sidebar-link active"><i class="ph ph-brain"></i> Huấn luyện AI</a>
-      <a href="/logout" class="sidebar-link sidebar-link--danger"><i class="ph ph-sign-out"></i> Đăng xuất</a>
-    </nav>
-  </aside>
-
-  <div class="admin-main">
-    <div class="admin-topbar">
-      <h1>Huấn luyện mô hình AI</h1>
-      <span class="model-status model-status--active">Model Active</span>
+<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:start;">
+  <!-- LEFT: TRAIN CONFIG FORM -->
+  <div class="card card--glow-purple">
+    <div class="card-header">
+      <h2><i class="ph-fill ph-sliders-horizontal" style="color:var(--accent-purple);"></i> Cấu hình tham số huấn luyện</h2>
+      <span class="system-status-pill">
+        <span class="status-dot"></span>
+        Sẵn sàng chạy
+      </span>
     </div>
 
-    <div class="admin-grid-2">
-      <div class="admin-card">
-        <div class="admin-card__header"><h2><i class="ph ph-sliders-horizontal"></i> Cấu hình huấn luyện</h2></div>
-        <form method="POST" action="/admin/train" id="trainForm">
-          <div class="form-group">
-            <label>Chế độ dữ liệu</label>
-            <select name="mode">
-              <option value="sale" selected>Giá bán nhà toàn quốc (Khuyên dùng cho định giá)</option>
-              <option value="all">Toàn bộ dataset mới (Bán & Thuê đa phân khúc — Toàn quốc)</option>
-              <option value="rent">Giá thuê nhà toàn quốc</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Thuật toán</label>
-            <select name="algorithm">
-              <option value="gradient_boosting">Gradient Boosting (Khuyên dùng)</option>
-              <option value="random_forest">Random Forest</option>
-              <option value="ridge">Ridge Regression</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Tỷ lệ tập test (%)</label>
-            <div style="display:flex;align-items:center;gap:12px">
-              <input type="range" name="test_size" min="10" max="40" value="20" style="flex:1" oninput="document.getElementById('testSizeVal').textContent=this.value+'%'"/>
-              <span id="testSizeVal" style="font-weight:600;min-width:40px;text-align:right">20%</span>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Số cây (n_estimators)</label>
-              <input type="number" name="n_estimators" value="200" min="10" max="500"/>
-            </div>
-            <div class="form-group">
-              <label>Độ sâu (max_depth)</label>
-              <input type="number" name="max_depth" value="5" min="1" max="20"/>
-            </div>
-          </div>
-          <div class="form-actions" style="margin-top:24px">
-            <button type="submit" class="btn btn--primary btn--full btn--lg" id="trainBtn">
-              <span class="btn-text"><i class="ph ph-rocket-launch"></i> Bắt đầu huấn luyện</span>
-              <span class="btn-loading"><i class="ph ph-spinner"></i> Đang huấn luyện...</span>
-            </button>
-          </div>
-        </form>
+    <form method="POST" action="/admin/train" id="trainForm">
+      <div class="form-group">
+        <label>Chế độ tập dữ liệu (Dataset Mode)</label>
+        <select name="mode">
+          <option value="sale" selected>Giá bán nhà toàn quốc (Khuyên dùng cho định giá)</option>
+          <option value="all">Toàn bộ dataset mới (Bán & Thuê đa phân khúc — Toàn quốc)</option>
+          <option value="rent">Giá thuê nhà toàn quốc</option>
+        </select>
+        <span class="field-hint">Chế độ "Giá bán" sẽ tự động loại bỏ tin cho thuê để định giá chuẩn xác.</span>
       </div>
 
-      <div class="admin-card">
-        <div class="admin-card__header"><h2><i class="ph ph-database"></i> Thông tin dữ liệu</h2></div>
-        <div class="train-data-info">
-          <div class="train-status__item">
-            <span class="train-label">Tổng bản ghi dataset</span>
-            <span class="train-val">{{ train_data.total }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Bản ghi hợp lệ (toàn quốc)</span>
-            <span class="train-val" style="color:var(--green)">{{ train_data.valid }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Bản ghi thiếu địa chỉ</span>
-            <span class="train-val" style="color:var(--text-muted)">{{ train_data.invalid }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Số Tỉnh / Thành phố</span>
-            <span class="train-val" style="color:var(--primary)">{{ train_data.cities_count }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Tin bán nhà toàn quốc</span>
-            <span class="train-val">{{ train_data.sales_count }}</span>
-          </div>
-          <div class="train-status__item" style="border:none">
-            <span class="train-label">Cập nhật lần cuối</span>
-            <span class="train-val">{{ train_data.last_updated }}</span>
-          </div>
-        </div>
-
-        {% if train_results %}
-        <div style="margin-top:24px;padding:20px;background:var(--green-glow);border-radius:var(--radius);border:1px solid var(--green);">
-          <div style="color:var(--green);font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
-            <i class="ph-fill ph-check-circle"></i> Kết quả huấn luyện
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Thuật toán</span>
-            <span class="train-val">{{ train_results.algorithm }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">R² Score</span>
-            <span class="train-val" style="color:var(--accent)">{{ train_results.r2 }}</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">Độ chính xác</span>
-            <span class="train-val" style="color:var(--green)">{{ train_results.accuracy }}%</span>
-          </div>
-          <div class="train-status__item">
-            <span class="train-label">MAE</span>
-            <span class="train-val">{{ "{:,.0f}".format(train_results.mae) }} VNĐ</span>
-          </div>
-          <div class="train-status__item" style="border:none;padding-bottom:0">
-            <span class="train-label">Thời gian train</span>
-            <span class="train-val">{{ train_results.trained_at }}</span>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if model_report and not train_results %}
-        <div style="margin-top:24px;">
-          <div style="color:var(--text-2);font-size:13px;font-weight:600;margin-bottom:8px;">Báo cáo mô hình hiện tại:</div>
-          <pre class="model-report-pre">{{ model_report }}</pre>
-        </div>
-        {% endif %}
+      <div class="form-group">
+        <label>Thuật toán học máy</label>
+        <select name="algorithm">
+          <option value="gradient_boosting" selected>Gradient Boosting Regressor (Mặc định - Khuyên dùng)</option>
+          <option value="random_forest">Random Forest Regressor (Tập hợp cây quyết định)</option>
+          <option value="ridge">Ridge Regression (Hồi quy tuyến tính có Regularization)</option>
+        </select>
       </div>
+
+      <div class="form-group">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <label style="margin-bottom:0;">Tỷ lệ tập kiểm thử (Test Size)</label>
+          <span id="testSizeVal" style="font-family:var(--font-mono);font-weight:700;color:var(--accent-cyan);">20%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <input type="range" name="test_size" min="10" max="40" value="20" style="flex:1;" oninput="document.getElementById('testSizeVal').textContent = this.value + '%'"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Số cây (n_estimators)</label>
+          <input type="number" name="n_estimators" value="200" min="10" max="500"/>
+        </div>
+
+        <div class="form-group">
+          <label>Độ sâu tối đa (max_depth)</label>
+          <input type="number" name="max_depth" value="5" min="1" max="20"/>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <button type="submit" class="btn btn--primary btn--full btn--lg" id="trainBtn" style="height:52px;">
+          <span class="btn-text" style="display:inline-flex;align-items:center;gap:10px;">
+            <i class="ph-bold ph-rocket-launch"></i> Bắt đầu Huấn luyện Mô hình
+          </span>
+          <span class="btn-loading">
+            <i class="ph ph-spinner"></i> Đang huấn luyện & tối ưu hóa siêu tham số...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- RIGHT: DATASET METRICS & SUMMARY -->
+  <div>
+    <!-- Dataset stats card -->
+    <div class="card card--glow-cyan" style="margin-bottom:24px;">
+      <div class="card-header">
+        <h2><i class="ph-fill ph-database" style="color:var(--accent-cyan);"></i> Thống kê bộ dữ liệu</h2>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-size:13.5px;">
+          <span style="color:var(--text-muted);">Tổng số bản ghi trong dataset</span>
+          <span style="font-weight:700;color:#fff;font-family:var(--font-mono);">{{ train_data.total }}</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-size:13.5px;">
+          <span style="color:var(--text-muted);">Bản ghi hợp lệ toàn quốc</span>
+          <span style="font-weight:700;color:var(--accent-green);font-family:var(--font-mono);">{{ train_data.valid }}</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-size:13.5px;">
+          <span style="color:var(--text-muted);">Bản ghi thiếu địa chỉ</span>
+          <span style="font-weight:700;color:var(--text-dim);font-family:var(--font-mono);">{{ train_data.invalid }}</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-size:13.5px;">
+          <span style="color:var(--text-muted);">Phạm vi Tỉnh / Thành phố</span>
+          <span style="font-weight:700;color:var(--accent-blue);font-family:var(--font-mono);">{{ train_data.cities_count }} Tỉnh thành</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-size:13.5px;">
+          <span style="color:var(--text-muted);">Mẫu tin bán nhà sạch</span>
+          <span style="font-weight:700;color:var(--accent-purple);font-family:var(--font-mono);">{{ train_data.sales_count }}</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:13.5px;">
+          <span style="color:var(--text-muted);">Thời gian cập nhật</span>
+          <span style="font-weight:600;color:var(--text-muted);font-family:var(--font-mono);">{{ train_data.last_updated }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Report Preview -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="ph-fill ph-file-text"></i> Báo cáo mô hình hiện tại</h3>
+      </div>
+      {% if model_report %}
+        <pre class="model-report-pre" style="max-height:280px;">{{ model_report }}</pre>
+      {% else %}
+        <p style="font-size:13.5px;color:var(--text-dim);">Chưa có báo cáo huấn luyện nào được lưu.</p>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -140,9 +129,10 @@
 {% block extra_js %}
 <script>
 document.getElementById('trainForm').addEventListener('submit', function() {
-  document.querySelector('.btn-text').style.display = 'none';
-  document.querySelector('.btn-loading').style.display = 'inline-flex';
-  document.getElementById('trainBtn').disabled = true;
+  const btn = document.getElementById('trainBtn');
+  btn.querySelector('.btn-text').style.display = 'none';
+  btn.querySelector('.btn-loading').style.display = 'inline-flex';
+  btn.disabled = true;
 });
 </script>
 {% endblock %}

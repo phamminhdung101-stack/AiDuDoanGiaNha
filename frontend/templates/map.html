@@ -1,0 +1,862 @@
+{% extends "base.html" %}
+{% block title %}Bản đồ giá bất động sản — HousePrice AI Platform{% endblock %}
+{% block page_title %}Bản đồ Phân bố Giá Bất động sản Toàn quốc{% endblock %}
+{% block body_class %}page-map{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet & Leaflet MarkerCluster CSS từ CDN chính thức -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+/* Layout bản đồ phân bố giá */
+.map-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 120px);
+  min-height: 650px;
+}
+
+/* Khung hiển thị Canvas bản đồ */
+.map-canvas-container {
+  flex: 1;
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  background: #E5E7EB;
+}
+
+#propertyMap {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  display: block;
+  position: relative;
+  background: #E5E7EB;
+  z-index: 1;
+}
+
+/* Floating Toolbar lọc dữ liệu phía trên bản đồ */
+.map-floating-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Chú thích 5 phân cấp giá góc trái dưới */
+.map-legend-panel {
+  position: absolute;
+  bottom: 24px;
+  left: 20px;
+  z-index: 500;
+  background: rgba(16, 27, 48, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+  font-size: 12px;
+  max-width: 290px;
+  pointer-events: auto;
+}
+.map-legend-title {
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+.legend-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Thanh chuyển đổi lớp Marker / Heatmap góc phải trên */
+.map-layer-toggles {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 500;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.layer-btn {
+  background: rgba(16, 27, 48, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.layer-btn:hover {
+  background: var(--bg-card-sub);
+  color: #fff;
+}
+.layer-btn.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  border-color: var(--accent-blue);
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Trạng thái Loading */
+.map-loading-indicator {
+  position: absolute;
+  top: 20px;
+  left: 60px;
+  z-index: 500;
+  background: rgba(16, 27, 48, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  color: var(--accent-cyan);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.spinner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  border-top-color: transparent;
+  animation: mapSpin 0.7s linear infinite;
+}
+@keyframes mapSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Thông báo khi không có dữ liệu */
+.map-empty-alert {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: rgba(23, 35, 59, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: #F8FAFC;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Tùy biến Leaflet Popup phong cách Dark Modern AI */
+.leaflet-popup-content-wrapper {
+  background: #17233B !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #293750 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7) !important;
+  padding: 0 !important;
+}
+.leaflet-popup-tip {
+  background: #17233B !important;
+}
+.leaflet-popup-content {
+  margin: 16px 18px !important;
+  line-height: 1.5 !important;
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: #94A3B8 !important;
+  top: 10px !important;
+  right: 12px !important;
+  font-size: 18px !important;
+  padding: 0 !important;
+}
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #fff !important;
+}
+
+/* Kiểu hiển thị Popup card */
+.iw-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.iw-price {
+  font-size: 19px;
+  font-weight: 800;
+  color: #06B6D4;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 8px;
+}
+.iw-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #94A3B8;
+  margin-bottom: 12px;
+  border-top: 1px solid #293750;
+  padding-top: 8px;
+}
+.iw-exact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  margin-bottom: 8px;
+}
+.iw-approx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3B82F6;
+  margin-bottom: 8px;
+}
+
+/* Custom Marker Pins phong cách Dark Vector */
+.custom-pin-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+}
+.custom-pin-wrapper:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}
+.custom-pin-svg {
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+}
+
+/* Custom MarkerCluster Badges phong cách Dark Modern AI */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: transparent !important;
+}
+.cluster-custom-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s;
+}
+.cluster-custom-badge:hover {
+  transform: scale(1.15);
+}
+.cluster-tier-small {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(16, 185, 129, 0.95));
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+}
+.cluster-tier-medium {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(234, 88, 12, 0.95));
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+}
+.cluster-tier-large {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(168, 85, 247, 0.95));
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.7);
+}
+
+/* Tùy biến Leaflet Zoom Controls */
+.leaflet-bar {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+}
+.leaflet-bar a {
+  background-color: rgba(16, 27, 48, 0.92) !important;
+  color: #F1F5F9 !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s;
+}
+.leaflet-bar a:hover {
+  background-color: var(--accent-blue) !important;
+  color: #fff !important;
+}
+.leaflet-control-attribution {
+  background: rgba(8, 13, 26, 0.85) !important;
+  color: #64748B !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(6px);
+  border-top-left-radius: 6px;
+}
+.leaflet-control-attribution a {
+  color: var(--accent-blue) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-page-layout">
+  <!-- FILTER TOOLBAR -->
+  <div class="map-floating-toolbar">
+    <!-- Chọn Tỉnh/Thành phố -->
+    <div style="min-width:180px;">
+      <select id="mapProvinceSelect" onchange="onMapProvinceChange()">
+        {% for p in provinces %}
+        <option value="{{ p }}" {% if p == default_province %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Chọn Quận/Huyện -->
+    <div style="min-width:180px;">
+      <select id="mapDistrictSelect" onchange="applyMapFilters()">
+        <option value="">-- Tất cả Quận / Huyện --</option>
+        {% for d in districts %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Phân cấp khoảng giá -->
+    <div style="min-width:170px;">
+      <select id="mapPriceTierSelect" onchange="applyMapFilters()">
+        <option value="">-- Tất cả khoảng giá --</option>
+        <option value="0-2500000000">Dưới 2.5 Tỷ</option>
+        <option value="2500000000-5000000000">2.5 – 5 Tỷ</option>
+        <option value="5000000000-8000000000">5 – 8 Tỷ</option>
+        <option value="8000000000-15000000000">8 – 15 Tỷ</option>
+        <option value="15000000000-0">Trên 15 Tỷ</option>
+      </select>
+    </div>
+
+    <!-- Ô tìm kiếm địa chỉ / khu vực -->
+    <div class="search-input-box" style="flex:1;min-width:200px;">
+      <i class="ph ph-magnifying-glass"></i>
+      <input type="text" id="mapSearchInput" placeholder="Tìm kiếm tên đường, phường hoặc quận..." onkeypress="if(event.key==='Enter') searchLocation()"/>
+    </div>
+
+    <button type="button" class="btn btn--primary btn--sm" onclick="applyMapFilters()">
+      <i class="ph-bold ph-funnel"></i> Lọc dữ liệu
+    </button>
+    <button type="button" class="btn btn--outline btn--sm" onclick="resetMapFilters()">
+      <i class="ph ph-arrow-counter-clockwise"></i> Đặt lại
+    </button>
+
+    <div style="margin-left:auto;font-size:12.5px;color:var(--text-muted);">
+      Hiển thị: <strong id="markerCountText" style="color:var(--accent-cyan);">{{ "{:,}".format(initial_data.displayed) if initial_data and initial_data.displayed else '450' }}</strong> / <span id="markerTotalText">{{ "{:,}".format(initial_data.total) if initial_data and initial_data.total else '4,849' }}</span> bất động sản
+    </div>
+  </div>
+
+  <!-- LEAFLET & OPENSTREETMAP CANVAS CONTAINER -->
+  <div class="map-canvas-container">
+    <!-- Leaflet Map Canvas Element -->
+    <div id="propertyMap"></div>
+
+    <!-- Indicator Đang tải -->
+    <div class="map-loading-indicator" id="mapLoadingIndicator">
+      <span class="spinner-dot"></span>
+      <span>Đang tải dữ liệu bất động sản...</span>
+    </div>
+
+    <!-- Thông báo khi lọc ra 0 kết quả -->
+    <div class="map-empty-alert" id="mapEmptyAlert">
+      <i class="ph-fill ph-warning" style="color:var(--accent-amber);font-size:20px;"></i>
+      <span>Hiện chưa có dữ liệu bất động sản có tọa độ hợp lệ trong khu vực này.</span>
+    </div>
+
+    <!-- Thanh chuyển đổi Marker / Heatmap -->
+    <div class="map-layer-toggles">
+      <button type="button" class="layer-btn active" id="btnToggleMarkers" onclick="toggleMarkers()">
+        <i class="ph-fill ph-map-pin"></i> Markers
+      </button>
+      <button type="button" class="layer-btn" id="btnToggleHeatmap" onclick="toggleHeatmap()">
+        <i class="ph-fill ph-fire"></i> Heatmap Giá/m²
+      </button>
+    </div>
+
+    <!-- Bảng phân loại 5 ngưỡng giá -->
+    <div class="map-legend-panel">
+      <div class="map-legend-title">
+        <i class="ph-fill ph-palette"></i> Phân loại Giá Bất động sản
+      </div>
+      <div class="map-legend-items">
+        <div class="map-legend-item">
+          <span class="legend-color-dot" style="background:#10B981;"></span>
+          <span>Dưới 2.5 Tỷ (Phân khúc thấp)</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-color-dot" style="background:#3B82F6;"></span>
+          <span>2.5 &ndash; 5 Tỷ (Trung bình thấp)</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-color-dot" style="background:#F59E0B;"></span>
+          <span>5 &ndash; 8 Tỷ (Trung bình cao)</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-color-dot" style="background:#EA580C;"></span>
+          <span>8 &ndash; 15 Tỷ (Phân khúc cao)</span>
+        </div>
+        <div class="map-legend-item">
+          <span class="legend-color-dot" style="background:#EF4444;"></span>
+          <span>Trên 15 Tỷ (Hạng sang & Mặt tiền)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet Core & Plugins Scripts từ CDN chính thức -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+// Dữ liệu bất động sản khởi tạo trực tiếp từ Backend (không phụ thuộc roundtrip mạng đầu tiên)
+const INITIAL_DATA = {{ (initial_data or {}) | tojson }};
+
+// Biến trạng thái toàn cục của Leaflet Map
+let mapInstance = null;
+let clusterGroup = null;
+let heatmapLayer = null;
+let currentItems = [];
+let isMarkersVisible = true;
+let isHeatmapVisible = false;
+
+// Tọa độ mặc định chuẩn: TP. Hồ Chí Minh
+const DEFAULT_CENTER = [10.8231, 106.6297];
+const DEFAULT_ZOOM = 11;
+
+function startMapApp() {
+  // 1. Khởi tạo bản đồ Leaflet OpenStreetMap
+  initLeafletMap();
+
+  // 2. Nạp dữ liệu bất động sản: Ưu tiên dữ liệu khởi tạo, nếu chưa có thì fetch qua API
+  if (INITIAL_DATA && INITIAL_DATA.items && INITIAL_DATA.items.length > 0) {
+    applyDataToLeaflet(INITIAL_DATA);
+  } else {
+    fetchMapData();
+  }
+}
+
+// Đảm bảo khởi tạo an toàn bất kể thời điểm DOM hoàn tất
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startMapApp);
+} else {
+  startMapApp();
+}
+
+function initLeafletMap() {
+  const mapElem = document.getElementById('propertyMap');
+  if (!mapElem) return;
+
+  // Tránh khởi tạo nhiều lần gây lỗi "Map container is already initialized"
+  if (mapInstance) {
+    return;
+  }
+
+  try {
+    // Khởi tạo Leaflet Map với vị trí mặc định TP. Hồ Chí Minh
+    mapInstance = L.map('propertyMap', {
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: true,
+      minZoom: 5,
+      maxZoom: 19,
+    });
+
+    // Bản đồ nền OpenStreetMap chính thức (100% miễn phí, hoàn toàn không cần API Key)
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c']
+    });
+
+    osmLayer.addTo(mapInstance);
+
+    // Khởi tạo nhóm MarkerClusterGroup (hoặc fallback sang L.featureGroup nếu thư viện CDN chưa sẵn sàng)
+    if (window.L && typeof L.markerClusterGroup === 'function') {
+      clusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 45,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount();
+          let tierClass = 'cluster-tier-small';
+          if (count > 80) {
+            tierClass = 'cluster-tier-large';
+          } else if (count > 25) {
+            tierClass = 'cluster-tier-medium';
+          }
+          return L.divIcon({
+            html: `<div class="cluster-custom-badge ${tierClass}"><span>${count}</span></div>`,
+            className: 'custom-cluster-marker',
+            iconSize: L.point(36, 36)
+          });
+        }
+      });
+    } else {
+      clusterGroup = L.featureGroup();
+    }
+
+    mapInstance.addLayer(clusterGroup);
+
+    // Đảm bảo kích thước bản đồ được render chuẩn xác
+    setTimeout(() => {
+      if (mapInstance) mapInstance.invalidateSize();
+    }, 200);
+
+    window.addEventListener('resize', () => {
+      if (mapInstance) mapInstance.invalidateSize();
+    });
+
+  } catch (err) {
+    console.error('Lỗi khởi tạo bản đồ Leaflet:', err);
+  }
+}
+
+function onMapProvinceChange() {
+  const prov = document.getElementById('mapProvinceSelect').value;
+  const distSelect = document.getElementById('mapDistrictSelect');
+  distSelect.innerHTML = '<option value="">Đang tải danh sách...</option>';
+
+  fetch(`/api/areas/districts?province=${encodeURIComponent(prov)}`)
+    .then(r => r.json())
+    .then(data => {
+      distSelect.innerHTML = '<option value="">-- Tất cả Quận / Huyện --</option>';
+      if (data.success && data.districts) {
+        data.districts.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          distSelect.appendChild(opt);
+        });
+      }
+      applyMapFilters();
+    })
+    .catch(() => {
+      distSelect.innerHTML = '<option value="">-- Tất cả Quận / Huyện --</option>';
+      applyMapFilters();
+    });
+}
+
+function applyMapFilters() {
+  fetchMapData();
+}
+
+function resetMapFilters() {
+  document.getElementById('mapDistrictSelect').value = '';
+  document.getElementById('mapPriceTierSelect').value = '';
+  document.getElementById('mapSearchInput').value = '';
+  fetchMapData();
+}
+
+function fetchMapData() {
+  const province = document.getElementById('mapProvinceSelect').value;
+  const district = document.getElementById('mapDistrictSelect').value;
+  const priceRange = document.getElementById('mapPriceTierSelect').value;
+
+  let minP = 0, maxP = 0;
+  if (priceRange) {
+    const parts = priceRange.split('-');
+    minP = parseFloat(parts[0]) || 0;
+    maxP = parseFloat(parts[1]) || 0;
+  }
+
+  const loader = document.getElementById('mapLoadingIndicator');
+  if (loader) loader.style.display = 'flex';
+
+  const url = `/api/properties/map?province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}&min_price=${minP}&max_price=${maxP}&limit=450`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (loader) loader.style.display = 'none';
+      if (!data.success) {
+        console.warn('API bản đồ trả về trạng thái:', data.error);
+        return;
+      }
+
+      // Nạp dữ liệu lên bản đồ Leaflet
+      applyDataToLeaflet(data);
+    })
+    .catch(err => {
+      if (loader) loader.style.display = 'none';
+      console.error('Lỗi truy vấn dữ liệu bản đồ:', err);
+    });
+}
+
+function applyDataToLeaflet(data) {
+  if (!mapInstance) return;
+
+  currentItems = data.items || [];
+
+  // Cập nhật số lượng bất động sản trên thanh công cụ
+  const countEl = document.getElementById('markerCountText');
+  const totalEl = document.getElementById('markerTotalText');
+  if (countEl) countEl.textContent = (data.displayed || 0).toLocaleString();
+  if (totalEl) totalEl.textContent = (data.total || 0).toLocaleString();
+
+  // Hiển thị hoặc ẩn thông báo không có dữ liệu
+  const emptyAlert = document.getElementById('mapEmptyAlert');
+  if (emptyAlert) {
+    emptyAlert.style.display = (data.displayed === 0) ? 'flex' : 'none';
+  }
+
+  // 1. Cập nhật tâm và mức zoom bản đồ
+  if (data.center && typeof data.center.lat === 'number' && typeof data.center.lng === 'number') {
+    mapInstance.setView([data.center.lat, data.center.lng], data.center.zoom || DEFAULT_ZOOM, {
+      animate: true,
+      duration: 0.8
+    });
+  }
+
+  // 2. Vẽ Markers và gom cụm (Marker Clustering)
+  renderLeafletMarkers(data.items || []);
+
+  // 3. Khởi tạo lớp Heatmap Layer bằng Leaflet.heat
+  renderLeafletHeatmap(data.heatmap || []);
+}
+
+function renderLeafletMarkers(items) {
+  if (!clusterGroup) return;
+
+  // Xóa sạch các Marker cũ trong nhóm cụm
+  clusterGroup.clearLayers();
+
+  const newMarkers = [];
+
+  items.forEach(item => {
+    // Kiểm tra tính hợp lệ của tọa độ
+    if (typeof item.lat !== 'number' || typeof item.lng !== 'number' || isNaN(item.lat) || isNaN(item.lng)) {
+      return;
+    }
+
+    // Biểu tượng Marker SVG theo màu của từng phân cấp giá
+    const pinColor = item.color || '#3B82F6';
+    const svgIconHtml = `
+      <div class="custom-pin-wrapper">
+        <svg class="custom-pin-svg" width="26" height="34" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 0C5.37258 0 0 5.37258 0 12C0 19.5 10.5 30.5 11.3 31.4C11.7 31.8 12.3 31.8 12.7 31.4C13.5 30.5 24 19.5 24 12C24 5.37258 18.6274 0 12 0Z" fill="${pinColor}"/>
+          <circle cx="12" cy="11" r="4.5" fill="#FFFFFF"/>
+        </svg>
+      </div>
+    `;
+
+    const customIcon = L.divIcon({
+      html: svgIconHtml,
+      className: '',
+      iconSize: [26, 34],
+      iconAnchor: [13, 34],
+      popupAnchor: [0, -32]
+    });
+
+    const marker = L.marker([item.lat, item.lng], {
+      icon: customIcon,
+      title: item.title
+    });
+
+    // Nội dung Popup chi tiết khi click vào Marker
+    const popupContent = `
+      <div>
+        <div class="${item.is_exact ? 'iw-exact-badge' : 'iw-approx-badge'}">
+          <i class="ph-fill ${item.is_exact ? 'ph-check-circle' : 'ph-map-pin'}"></i>
+          ${item.is_exact ? 'Tọa độ địa chỉ cụ thể' : item.location_label}
+        </div>
+        <div class="iw-title">${item.title}</div>
+        <div class="iw-price">${item.price_formatted}</div>
+        <div class="iw-details">
+          <div><i class="ph ph-ruler"></i> Diện tích: <strong>${item.area} m²</strong> (${item.price_per_m2_formatted})</div>
+          <div><i class="ph ph-map-pin"></i> Vị trí: ${item.district}, ${item.location}</div>
+          ${item.rooms ? `<div><i class="ph ph-bed"></i> Thiết kế: ${item.rooms} PN &bull; ${item.toilets} WC</div>` : ''}
+        </div>
+        <a href="/predict" class="btn btn--primary btn--xs btn--full">
+          <i class="ph-bold ph-magic-wand"></i> Định giá căn tương tự
+        </a>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent, {
+      maxWidth: 320,
+      autoPan: true
+    });
+
+    // Lưu reference để phục vụ tính năng tìm kiếm
+    marker._propertyData = item;
+    newMarkers.push(marker);
+  });
+
+  // Thêm toàn bộ Markers vào ClusterGroup một lần duy nhất để tối ưu render
+  if (typeof clusterGroup.addLayers === 'function') {
+    clusterGroup.addLayers(newMarkers);
+  } else {
+    newMarkers.forEach(m => clusterGroup.addLayer(m));
+  }
+}
+
+function renderLeafletHeatmap(heatmapPoints) {
+  // Gỡ Heatmap Layer cũ nếu có
+  if (heatmapLayer && mapInstance.hasLayer(heatmapLayer)) {
+    mapInstance.removeLayer(heatmapLayer);
+  }
+
+  if (typeof L.heatLayer !== 'function') {
+    return;
+  }
+
+  // Chuẩn bị danh sách tọa độ và trọng số cho Leaflet.heat: [lat, lng, intensity]
+  const heatData = heatmapPoints
+    .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number' && !isNaN(p.lat) && !isNaN(p.lng))
+    .map(p => [p.lat, p.lng, (p.weight || 1.0) / 35.0]);
+
+  heatmapLayer = L.heatLayer(heatData, {
+    radius: 26,
+    blur: 16,
+    maxZoom: 16,
+    max: 1.0,
+    gradient: {
+      0.15: '#06B6D4',
+      0.35: '#3B82F6',
+      0.60: '#10B981',
+      0.80: '#F59E0B',
+      1.00: '#EF4444'
+    }
+  });
+
+  // Nếu người dùng đang bật chế độ Heatmap, thêm layer vào bản đồ
+  if (isHeatmapVisible) {
+    mapInstance.addLayer(heatmapLayer);
+  }
+}
+
+function toggleMarkers() {
+  isMarkersVisible = !isMarkersVisible;
+  const btn = document.getElementById('btnToggleMarkers');
+  btn.classList.toggle('active', isMarkersVisible);
+
+  if (clusterGroup) {
+    if (isMarkersVisible) {
+      if (!mapInstance.hasLayer(clusterGroup)) {
+        mapInstance.addLayer(clusterGroup);
+      }
+    } else {
+      if (mapInstance.hasLayer(clusterGroup)) {
+        mapInstance.removeLayer(clusterGroup);
+      }
+    }
+  }
+}
+
+function toggleHeatmap() {
+  isHeatmapVisible = !isHeatmapVisible;
+  const btn = document.getElementById('btnToggleHeatmap');
+  btn.classList.toggle('active', isHeatmapVisible);
+
+  if (heatmapLayer) {
+    if (isHeatmapVisible) {
+      if (!mapInstance.hasLayer(heatmapLayer)) {
+        mapInstance.addLayer(heatmapLayer);
+      }
+    } else {
+      if (mapInstance.hasLayer(heatmapLayer)) {
+        mapInstance.removeLayer(heatmapLayer);
+      }
+    }
+  }
+}
+
+function searchLocation() {
+  const query = document.getElementById('mapSearchInput').value.trim().toLowerCase();
+  if (!query) return;
+
+  // 1. Tìm kiếm trong danh sách Markers đang hiển thị
+  let matchedMarker = null;
+  if (clusterGroup) {
+    clusterGroup.eachLayer(layer => {
+      const data = layer._propertyData;
+      if (data && !matchedMarker) {
+        const fullStr = `${data.title} ${data.address || ''} ${data.ward || ''} ${data.district || ''}`.toLowerCase();
+        if (fullStr.includes(query)) {
+          matchedMarker = layer;
+        }
+      }
+    });
+  }
+
+  if (matchedMarker) {
+    const latlng = matchedMarker.getLatLng();
+    mapInstance.setView(latlng, 16, { animate: true });
+    // Nếu marker nằm trong cụm cluster, phóng to để tách cụm và mở popup
+    if (clusterGroup && typeof clusterGroup.zoomToShowLayer === 'function') {
+      clusterGroup.zoomToShowLayer(matchedMarker, () => {
+        matchedMarker.openPopup();
+      });
+    } else {
+      matchedMarker.openPopup();
+    }
+    return;
+  }
+
+  // 2. Nếu không tìm thấy trong markers hiện tại, thử tìm theo danh sách Quận/Huyện
+  const distSelect = document.getElementById('mapDistrictSelect');
+  for (let opt of distSelect.options) {
+    if (opt.value && opt.value.toLowerCase().includes(query)) {
+      distSelect.value = opt.value;
+      applyMapFilters();
+      return;
+    }
+  }
+}
+</script>
+{% endblock %}

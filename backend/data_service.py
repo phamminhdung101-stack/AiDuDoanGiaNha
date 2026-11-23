@@ -28,21 +28,25 @@ def save_prediction(user_id: int, form_data: dict, result: dict):
 
 
 def get_user_history(user_id: int) -> list:
-    with get_cursor() as (cursor, _):
-        cursor.execute("""
-            SELECT id, city, district, street, area, house_type,
-                   bedrooms, bathrooms, floors, pred_price, min_price, max_price,
-                   confidence, created_at
-            FROM predictions
-            WHERE user_id = %s
-            ORDER BY created_at DESC
-        """, (user_id,))
-        rows = cursor.fetchall()
-    for r in rows:
-        if r.get("created_at"):
-            r["created_at"] = r["created_at"].strftime("%d/%m/%Y %H:%M")
-        r["house_type_label"] = r.get("house_type", "").replace("_", " ").title()
-    return rows
+    try:
+        with get_cursor() as (cursor, _):
+            cursor.execute("""
+                SELECT id, city, district, street, area, house_type,
+                       bedrooms, bathrooms, floors, pred_price, min_price, max_price,
+                       confidence, created_at
+                FROM predictions
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+            """, (user_id,))
+            rows = cursor.fetchall()
+        for r in rows:
+            if r.get("created_at"):
+                r["created_at"] = r["created_at"].strftime("%d/%m/%Y %H:%M")
+            r["house_type_label"] = r.get("house_type", "").replace("_", " ").title()
+        return rows
+    except Exception as e:
+        print(f"[WARN] get_user_history DB error: {e}")
+        return []
 
 
 def delete_prediction(prediction_id: int, user_id: int):
@@ -58,35 +62,39 @@ def delete_prediction(prediction_id: int, user_id: int):
 def get_all_houses(search: str = "", page: int = 1, per_page: int = 15):
     offset = (page - 1) * per_page
     like   = f"%{search}%"
-    with get_cursor() as (cursor, _):
-        if search:
-            cursor.execute("""
-                SELECT COUNT(*) as n FROM houses
-                WHERE title LIKE %s OR city LIKE %s OR district LIKE %s
-                   OR street LIKE %s OR house_type LIKE %s
-            """, (like,)*5)
-        else:
-            cursor.execute("SELECT COUNT(*) as n FROM houses")
-        total = cursor.fetchone()["n"]
+    try:
+        with get_cursor() as (cursor, _):
+            if search:
+                cursor.execute("""
+                    SELECT COUNT(*) as n FROM houses
+                    WHERE title LIKE %s OR city LIKE %s OR district LIKE %s
+                       OR street LIKE %s OR house_type LIKE %s
+                """, (like,)*5)
+            else:
+                cursor.execute("SELECT COUNT(*) as n FROM houses")
+            total = cursor.fetchone()["n"]
 
-        if search:
-            cursor.execute("""
-                SELECT * FROM houses
-                WHERE title LIKE %s OR city LIKE %s OR district LIKE %s
-                   OR street LIKE %s OR house_type LIKE %s
-                ORDER BY created_at DESC LIMIT %s OFFSET %s
-            """, (like,)*5 + (per_page, offset))
-        else:
-            cursor.execute(
-                "SELECT * FROM houses ORDER BY created_at DESC LIMIT %s OFFSET %s",
-                (per_page, offset)
-            )
-        rows = cursor.fetchall()
+            if search:
+                cursor.execute("""
+                    SELECT * FROM houses
+                    WHERE title LIKE %s OR city LIKE %s OR district LIKE %s
+                       OR street LIKE %s OR house_type LIKE %s
+                    ORDER BY created_at DESC LIMIT %s OFFSET %s
+                """, (like,)*5 + (per_page, offset))
+            else:
+                cursor.execute(
+                    "SELECT * FROM houses ORDER BY created_at DESC LIMIT %s OFFSET %s",
+                    (per_page, offset)
+                )
+            rows = cursor.fetchall()
 
-    for r in rows:
-        if r.get("created_at"):
-            r["created_at"] = r["created_at"].strftime("%d/%m/%Y")
-    return rows, total
+        for r in rows:
+            if r.get("created_at"):
+                r["created_at"] = r["created_at"].strftime("%d/%m/%Y")
+        return rows, total
+    except Exception as e:
+        print(f"[WARN] get_all_houses DB error: {e}")
+        return [], 0
 
 
 def get_house(house_id: int) -> dict | None:

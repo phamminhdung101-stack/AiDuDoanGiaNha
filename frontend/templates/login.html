@@ -1,62 +1,100 @@
 {% extends "base.html" %}
-{% block title %}Đăng nhập — HouseAI{% endblock %}
+{% block title %}Đăng nhập — HousePrice AI Platform{% endblock %}
 {% block body_class %}page-auth{% endblock %}
 
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-card">
-    <div class="auth-card__header">
-      <div style="font-size:32px;color:var(--accent);margin-bottom:16px"><i class="ph-fill ph-hexagon"></i></div>
-      <h1>Đăng nhập</h1>
-      <p>Chào mừng bạn trở lại với HouseAI</p>
+<div class="auth-page-wrapper">
+  <!-- Left Side: AI Hero Showcase -->
+  <div class="auth-hero-side">
+    <div class="brand-link">
+      <div class="brand-logo-icon">
+        <i class="ph-fill ph-sparkle"></i>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">House<span>Price AI</span></span>
+        <span class="brand-tag">Deep Learning Hub</span>
+      </div>
     </div>
 
-    <form class="auth-form" method="POST" action="/login">
-      <div class="form-group">
-        <label for="username">Tên đăng nhập</label>
-        <div class="input-wrap" style="position:relative">
-          <i class="ph ph-user" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-          <input type="text" style="padding-left:40px" id="username" name="username" placeholder="Nhập tên đăng nhập" required autocomplete="username"/>
+    <div class="auth-hero-content">
+      <div class="auth-hero-badge">
+        <i class="ph-fill ph-cpu"></i> Machine Learning Core v2.4
+      </div>
+      <h1 class="auth-hero-title">
+        Định giá bất động sản với sức mạnh <span>Trí tuệ nhân tạo</span>
+      </h1>
+      <p class="auth-hero-desc">
+        Nền tảng ứng dụng mô hình Gradient Boosting đa tham số, phân tích hàng nghìn dữ liệu giao dịch thực tế trên 52 tỉnh thành với độ chính xác cao.
+      </p>
+
+      <div class="auth-feature-list">
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-trend-up"></i></div>
+          <span>Ước tính giá trị & biên độ tin cậy tức thì chỉ sau 0.2s</span>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-map-pin"></i></div>
+          <span>Bản đồ tọa độ & danh mục địa phương được chuẩn hóa liên tục</span>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-shield-check"></i></div>
+          <span>Bảo mật dữ liệu, phân quyền tài khoản & lưu vết lịch sử giao dịch</span>
         </div>
       </div>
-      <div class="form-group">
-        <label for="password">Mật khẩu</label>
-        <div class="input-wrap" style="position:relative">
-          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-          <input type="password" style="padding-left:40px" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
-          <button type="button" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3)" onclick="togglePw(this)"><i class="ph ph-eye"></i></button>
+    </div>
+
+    <div style="font-size:12.5px;color:var(--text-dim);position:relative;z-index:2;">
+      &copy; 2026 HousePrice AI — Bản quyền thuộc về hệ thống định giá bất động sản.
+    </div>
+  </div>
+
+  <!-- Right Side: Dark Modern Login Form -->
+  <div class="auth-form-side">
+    <div class="auth-card-box">
+      <div class="auth-header">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(59,130,246,0.15);color:var(--accent-blue);display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;">
+          <i class="ph-fill ph-lock-key"></i>
         </div>
+        <h2>Chào mừng trở lại</h2>
+        <p>Đăng nhập vào bảng điều khiển HousePrice AI</p>
       </div>
 
-      <div class="form-group form-group--row" style="margin-top:8px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;color:var(--text-2);font-size:14px">
-          <input type="checkbox" name="is_admin" style="width:auto;box-shadow:none"/>
-          Đăng nhập với tư cách Quản trị viên
-        </label>
+      <form method="POST" action="/login" class="auth-form">
+        <div class="form-group">
+          <label for="username">Tên đăng nhập</label>
+          <div class="input-wrap">
+            <i class="ph ph-user input-icon-left"></i>
+            <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập của bạn" required autocomplete="username"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <div class="input-wrap">
+            <i class="ph ph-lock-key input-icon-left"></i>
+            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password"/>
+            <button type="button" class="input-icon-right" onclick="togglePw(this)" title="Ẩn/Hiện mật khẩu">
+              <i class="ph ph-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;color:var(--text-muted);font-size:13.5px;">
+            <input type="checkbox" name="is_admin" style="width:16px;height:16px;accent-color:var(--accent-purple);border-radius:4px;cursor:pointer;"/>
+            <span>Đăng nhập với tư cách Quản trị viên (Admin)</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:12px;">
+          <i class="ph-bold ph-sign-in"></i> Đăng nhập hệ thống
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Chưa có tài khoản định giá? <a href="/register">Đăng ký thành viên mới</a>
       </div>
-
-      <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:8px">Đăng nhập</button>
-    </form>
-
-    <div class="auth-card__footer">
-      Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function togglePw(btn) {
-  const inp = btn.previousElementSibling;
-  const icon = btn.querySelector('i');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    icon.classList.replace('ph-eye', 'ph-eye-slash');
-  } else {
-    inp.type = 'password';
-    icon.classList.replace('ph-eye-slash', 'ph-eye');
-  }
-}
-</script>
 {% endblock %}

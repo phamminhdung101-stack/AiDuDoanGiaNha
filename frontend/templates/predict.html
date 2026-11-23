@@ -1,123 +1,188 @@
 {% extends "base.html" %}
-{% block title %}Dự đoán giá nhà — HouseAI{% endblock %}
+{% block title %}Dự đoán giá nhà AI — HousePrice AI Platform{% endblock %}
+{% block page_title %}Định giá Bất động sản AI{% endblock %}
 {% block body_class %}page-predict{% endblock %}
 
 {% block content %}
-<div class="predict-wrap">
+<div class="predict-wrap" style="display:grid;grid-template-columns:1fr 440px;gap:32px;align-items:start;">
+  <!-- LEFT COLUMN: INPUT FORM -->
   <div class="predict-form-col">
-    <div class="page-header">
-      <div class="page-header__tag"><i class="ph-fill ph-magic-wand"></i> AI Engine</div>
-      <h1>Dự đoán giá nhà</h1>
-      <p>Điền thông tin bất động sản để nhận ước tính giá trị</p>
+    <div style="margin-bottom:24px;">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-full);background:rgba(59,130,246,0.15);color:var(--accent-cyan);font-size:12px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.8px;">
+        <i class="ph-fill ph-magic-wand"></i> Intelligent Input Form
+      </div>
+      <h2 style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">Thông tin đặc tính bất động sản</h2>
+      <p style="font-size:14px;color:var(--text-muted);">Điền thông số kỹ thuật và vị trí để mô hình AI phân tích định giá chính xác</p>
     </div>
 
     <form class="predict-form" id="predictForm" method="POST" action="/predict">
-      <div class="form-section">
-        <div class="form-section__label"><i class="ph ph-map-pin"></i> Vị trí tài sản</div>
+      <!-- SECTION 1: VỊ TRÍ TÀI SẢN -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h3><i class="ph-fill ph-map-pin"></i> 1. Vị trí bất động sản</h3>
+          <span style="font-size:12px;color:var(--accent-cyan);font-weight:600;">Toàn quốc (52 Tỉnh thành)</span>
+        </div>
+
         {% if not cities %}
-        <div style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;line-height:1.5;">
+        <div style="background:rgba(245,158,11,0.15);color:var(--accent-amber);border:1px solid rgba(245,158,11,0.3);padding:14px 18px;border-radius:var(--radius);margin-bottom:20px;font-size:13.5px;line-height:1.6;">
           <i class="ph-fill ph-warning"></i> <strong>Chưa có danh mục địa điểm hợp lệ từ mô hình.</strong><br/>
-          Vui lòng liên hệ Quản trị viên huấn luyện mô hình với tập dữ liệu chuẩn trước khi sử dụng.
+          Vui lòng liên hệ Quản trị viên huấn luyện lại mô hình trong phần Quản trị.
         </div>
         {% endif %}
+
         <div class="form-row">
           <div class="form-group">
             <label>Tỉnh / Thành phố <span class="req">*</span></label>
             <select name="city" id="citySelect" required {% if not cities %}disabled{% endif %}>
-              <option value="">Chọn thành phố</option>
+              <option value="">-- Chọn Tỉnh / Thành phố --</option>
               {% for c in (cities or []) %}
               <option value="{{ c }}" {% if form_data.get('city') == c %}selected{% endif %}>{{ c }}</option>
               {% endfor %}
             </select>
           </div>
+
           <div class="form-group">
             <label>Phường / Xã <span class="req">*</span></label>
             <select name="ward" id="wardSelect" required data-selected="{{ form_data.get('ward', '') }}" {% if not cities %}disabled{% endif %}>
-              <option value="">Chọn phường/xã</option>
+              <option value="">-- Chọn Phường / Xã --</option>
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label>Đường / Phố <span class="field-hint">(Không bắt buộc — Hệ thống ghi nhận tên đường; xác thực đường–phường tự động bật khi có danh mục đường chính thức)</span></label>
-          <input type="text" name="street" value="{{ form_data.get('street','') }}" placeholder="Ví dụ: Nguyễn Văn Linh"/>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label>
+            Đường / Phố
+            <span class="field-hint">(Hệ thống tự động kích hoạt hệ số nhân mặt tiền đường chính)</span>
+          </label>
+          <div class="input-wrap">
+            <i class="ph ph-signpost input-icon-left"></i>
+            <input type="text" name="street" value="{{ form_data.get('street','') }}" placeholder="Ví dụ: Nguyễn Huệ, Đồng Khởi, Nguyễn Văn Linh..."/>
+          </div>
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="form-section__label"><i class="ph ph-house-line"></i> Thông số kỹ thuật</div>
+      <!-- SECTION 2: THÔNG SỐ KỸ THUẬT -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h3><i class="ph-fill ph-house-line"></i> 2. Thông số kỹ thuật & Quy mô</h3>
+          <span style="font-size:12px;color:var(--accent-purple);font-weight:600;">Kích thước & Công năng</span>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Diện tích sử dụng (m²) <span class="req">*</span></label>
-            <input type="number" name="area" value="{{ form_data.get('area','') }}" placeholder="80" min="10" max="10000" step="0.1" required/>
+            <div class="input-wrap">
+              <i class="ph ph-ruler input-icon-left"></i>
+              <input type="number" name="area" value="{{ form_data.get('area','') }}" placeholder="Ví dụ: 85" min="10" max="10000" step="0.1" required/>
+            </div>
           </div>
+
           <div class="form-group">
-            <label>Số tầng <span class="field-hint">(Nếu có)</span></label>
-            <input type="number" name="floors" value="{{ form_data.get('floors','') }}" placeholder="3" min="1" max="50"/>
+            <label>Số tầng công trình <span class="field-hint">(Mặc định 1 tầng)</span></label>
+            <div class="input-wrap">
+              <i class="ph ph-stack input-icon-left"></i>
+              <input type="number" name="floors" value="{{ form_data.get('floors','') }}" placeholder="Ví dụ: 3" min="1" max="50"/>
+            </div>
           </div>
         </div>
-        <div class="form-row">
+
+        <div class="form-row" style="margin-bottom:0;">
           <div class="form-group">
             <label>Số phòng ngủ <span class="req">*</span></label>
-            <input type="number" name="bedrooms" value="{{ form_data.get('bedrooms','') }}" placeholder="3" min="0" max="20" required/>
+            <div class="input-wrap">
+              <i class="ph ph-bed input-icon-left"></i>
+              <input type="number" name="bedrooms" value="{{ form_data.get('bedrooms','') }}" placeholder="Ví dụ: 3" min="0" max="30" required/>
+            </div>
           </div>
+
           <div class="form-group">
-            <label>Số phòng vệ sinh <span class="req">*</span></label>
-            <input type="number" name="bathrooms" value="{{ form_data.get('bathrooms','') }}" placeholder="2" min="0" max="20" required/>
+            <label>Số phòng vệ sinh (WC) <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="ph ph-bathtub input-icon-left"></i>
+              <input type="number" name="bathrooms" value="{{ form_data.get('bathrooms','') }}" placeholder="Ví dụ: 2" min="0" max="30" required/>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="form-section__label"><i class="ph ph-buildings"></i> Loại hình bất động sản</div>
-        <div class="form-group">
-          <div class="type-grid">
-            {% set ht = form_data.get('house_type','') %}
-            <label class="type-opt">
-              <input type="radio" name="house_type" value="nha_pho" {% if ht=='nha_pho' or not ht %}checked{% endif %}/>
-              <span><i class="ph ph-storefront"></i> Nhà phố</span>
-            </label>
-            <label class="type-opt">
-              <input type="radio" name="house_type" value="biet_thu" {% if ht=='biet_thu' %}checked{% endif %}/>
-              <span><i class="ph ph-house"></i> Biệt thự</span>
-            </label>
-            <label class="type-opt">
-              <input type="radio" name="house_type" value="chung_cu" {% if ht=='chung_cu' %}checked{% endif %}/>
-              <span><i class="ph ph-buildings"></i> Chung cư</span>
-            </label>
-            <label class="type-opt">
-              <input type="radio" name="house_type" value="dat_nen" {% if ht=='dat_nen' %}checked{% endif %}/>
-              <span><i class="ph ph-map-trifold"></i> Đất nền</span>
-            </label>
-          </div>
+      <!-- SECTION 3: LOẠI HÌNH BẤT ĐỘNG SẢN -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h3><i class="ph-fill ph-buildings"></i> 3. Phân loại loại hình bất động sản</h3>
+        </div>
+
+        <div class="type-grid">
+          {% set ht = form_data.get('house_type','') %}
+          <label class="type-opt">
+            <input type="radio" name="house_type" value="nha_pho" {% if ht=='nha_pho' or not ht %}checked{% endif %}/>
+            <span>
+              <i class="ph-bold ph-storefront"></i>
+              Nhà phố
+            </span>
+          </label>
+          <label class="type-opt">
+            <input type="radio" name="house_type" value="biet_thu" {% if ht=='biet_thu' %}checked{% endif %}/>
+            <span>
+              <i class="ph-bold ph-house"></i>
+              Biệt thự
+            </span>
+          </label>
+          <label class="type-opt">
+            <input type="radio" name="house_type" value="chung_cu" {% if ht=='chung_cu' %}checked{% endif %}/>
+            <span>
+              <i class="ph-bold ph-buildings"></i>
+              Chung cư
+            </span>
+          </label>
+          <label class="type-opt">
+            <input type="radio" name="house_type" value="dat_nen" {% if ht=='dat_nen' %}checked{% endif %}/>
+            <span>
+              <i class="ph-bold ph-map-trifold"></i>
+              Đất nền
+            </span>
+          </label>
         </div>
       </div>
 
-      <button type="submit" class="btn btn--primary btn--full btn--lg" id="predictBtn">
-        <span class="btn-text"><i class="ph ph-magnifying-glass"></i> Phân tích & Dự đoán</span>
-        <span class="btn-loading"><i class="ph ph-spinner"></i> Đang phân tích dữ liệu...</span>
+      <!-- SUBMIT PREDICT BUTTON -->
+      <button type="submit" class="btn btn--primary btn--full btn--lg" id="predictBtn" style="font-size:16px;height:54px;">
+        <span class="btn-text" style="display:inline-flex;align-items:center;gap:10px;">
+          <i class="ph-bold ph-sparkle"></i> Phân tích AI & Thẩm định Giá trị
+        </span>
+        <span class="btn-loading">
+          <i class="ph ph-spinner"></i> Đang trích xuất đặc trưng & tính toán mô hình...
+        </span>
       </button>
     </form>
   </div>
 
-  <div class="predict-result-col">
+  <!-- RIGHT COLUMN: PREDICTION RESULT -->
+  <div class="predict-result-col" style="position:sticky;top:96px;">
     {% if error_msg %}
-    <div class="result-card result-card--error">
-      <div style="text-align:center;padding:16px;">
-        <i class="ph-fill ph-warning-circle" style="font-size:56px;color:var(--red);margin-bottom:16px;display:block"></i>
-        <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Không thể phân tích</h3>
-        <p style="color:var(--text-2);font-size:14px">{{ error_msg }}</p>
-        <a href="/admin/train" class="btn btn--outline btn--sm" style="margin-top:24px"><i class="ph ph-robot"></i> Cập nhật mô hình</a>
+    <!-- Error State -->
+    <div class="result-card" style="border-color:var(--accent-red);box-shadow:0 0 25px rgba(239,68,68,0.25);">
+      <div style="text-align:center;padding:12px;">
+        <div style="width:64px;height:64px;border-radius:18px;background:rgba(239,68,68,0.15);color:var(--accent-red);display:inline-flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;">
+          <i class="ph-fill ph-warning-circle"></i>
+        </div>
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Không thể phân tích</h3>
+        <p style="color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:20px;">{{ error_msg }}</p>
+        <a href="/predict" class="btn btn--outline btn--sm"><i class="ph ph-arrow-counter-clockwise"></i> Thử lại form</a>
       </div>
     </div>
 
     {% elif result %}
+    <!-- Success Result Card -->
     <div class="result-card">
       <div class="result-card__header">
-        <span class="result-tag"><i class="ph-fill ph-check-circle"></i> Phân tích thành công</span>
+        <span class="result-tag">
+          <i class="ph-fill ph-check-circle"></i> Phân tích thành công
+        </span>
         <span class="result-time">{{ result.timestamp }}</span>
       </div>
-      <div class="result-price">
-        <div class="result-price__label">Giá trị ước tính</div>
+
+      <div class="result-price-box">
+        <div class="result-price__label">Giá trị tài sản ước tính</div>
         <div class="result-price__val">
           {% if result.price >= 1000000000 %}
             {{ "%.2f"|format(result.price / 1000000000) }}
@@ -136,63 +201,82 @@
           {% else %}VNĐ{% endif %}
         </div>
       </div>
-      
-      <div class="result-meta">
-        <div class="result-meta__item">
-          <span class="result-meta__label">Khoảng giá giao dịch</span>
-          <span class="result-meta__val">
+
+      <div class="result-meta-list">
+        <!-- Range -->
+        <div class="result-meta-item">
+          <span class="result-meta-label">Khoảng giá giao dịch thị trường</span>
+          <span class="result-meta-val" style="color:var(--accent-cyan);font-family:var(--font-mono);">
             {% if result.min_price >= 1000000000 %}{{ "%.2f"|format(result.min_price / 1000000000) }}
             {% elif result.min_price >= 1000000 %}{{ "%.1f"|format(result.min_price / 1000000) }}
             {% else %}{{ "%.0f"|format(result.min_price / 1000) }}{% endif %}
-            -
+            &ndash;
             {% if result.max_price >= 1000000000 %}{{ "%.2f"|format(result.max_price / 1000000000) }} Tỷ
             {% elif result.max_price >= 1000000 %}{{ "%.1f"|format(result.max_price / 1000000) }} Triệu
             {% else %}{{ "%.0f"|format(result.max_price / 1000) }} Nghìn{% endif %}
           </span>
         </div>
-        <div class="result-meta__item">
-          <span class="result-meta__label">Độ tin cậy của mô hình</span>
-          <span class="result-meta__val confidence"><i class="ph-fill ph-shield-check"></i> {{ result.confidence }}%</span>
+
+        <!-- Confidence -->
+        <div class="result-meta-item">
+          <span class="result-meta-label">Độ tin cậy của thuật toán</span>
+          <span class="result-meta-val" style="color:var(--accent-green);background:rgba(16,185,129,0.12);padding:3px 10px;border-radius:var(--radius-full);">
+            <i class="ph-fill ph-shield-check"></i> {{ result.confidence }}%
+          </span>
         </div>
+
+        <!-- Street verification if provided -->
         {% if form_data.get('street') %}
-        <div class="result-meta__item">
-          <span class="result-meta__label">Tên đường</span>
-          <span class="result-meta__val" style="font-size:13px">
+        <div class="result-meta-item">
+          <span class="result-meta-label">Tên đường</span>
+          <span class="result-meta-val" style="font-size:13px;">
             {{ form_data.get('street') }}
             {% if result.street_validation and result.street_validation.verified %}
-              <span style="color:var(--green);font-size:12px;margin-left:6px;"><i class="ph-fill ph-check-circle"></i> Đã xác thực thuộc phường</span>
+              <span style="color:var(--accent-green);font-size:11.5px;margin-left:6px;"><i class="ph-fill ph-check-circle"></i> Đã xác thực thuộc phường</span>
             {% else %}
-              <span style="color:var(--text-3);font-size:12px;margin-left:6px;" title="{{ result.street_validation.message if result.street_validation else 'Chưa có danh mục đường có cấu trúc để đối chiếu' }}"><i class="ph ph-info"></i> Chưa đối chiếu danh mục đường</span>
+              <span style="color:var(--text-dim);font-size:11.5px;margin-left:6px;" title="{{ result.street_validation.message if result.street_validation else 'Chưa có danh mục đường có cấu trúc để đối chiếu' }}"><i class="ph ph-info"></i> Chưa đối chiếu danh mục đường</span>
             {% endif %}
           </span>
         </div>
         {% endif %}
-        <div class="result-meta__item" style="border:none">
-          <span class="result-meta__label">Thuật toán</span>
-          <span class="result-meta__val"><i class="ph ph-cpu"></i> {{ result.algorithm }}</span>
+
+        <!-- Model used -->
+        <div class="result-meta-item" style="border:none;padding-bottom:0;">
+          <span class="result-meta-label">Mô hình phân tích</span>
+          <span class="result-meta-val" style="color:var(--accent-purple);">
+            <i class="ph ph-cpu"></i> {{ result.algorithm }}
+          </span>
         </div>
       </div>
-      <div class="result-actions">
-        <a href="/history" class="btn btn--outline"><i class="ph ph-list-dashes"></i> Lịch sử</a>
-        <button onclick="window.print()" class="btn btn--ghost"><i class="ph ph-printer"></i> In</button>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <a href="/history" class="btn btn--outline" style="flex:1;"><i class="ph ph-clock-counter-clockwise"></i> Lịch sử</a>
+        <button type="button" onclick="window.print()" class="btn btn--ghost" style="border:1px solid var(--border);"><i class="ph ph-printer"></i> In báo cáo</button>
       </div>
     </div>
 
     {% else %}
+    <!-- Placeholder Empty State -->
     <div class="result-placeholder">
-      <i class="ph-fill ph-calculator"></i>
-      <h3>Kết quả định giá</h3>
-      <p>Vui lòng điền thông tin và nhấn "Phân tích"</p>
+      <div style="width:72px;height:72px;border-radius:20px;background:rgba(59,130,246,0.1);color:var(--accent-blue);display:flex;align-items:center;justify-content:center;font-size:36px;">
+        <i class="ph-fill ph-calculator"></i>
+      </div>
+      <h3>Kết quả định giá AI</h3>
+      <p>Vui lòng điền thông số bất động sản bên cạnh và bấm "Phân tích AI" để nhận định giá tức thì.</p>
     </div>
     {% endif %}
 
-    <div class="tip-card">
-      <i class="ph-fill ph-lightbulb"></i>
+    <!-- Professional Valuation Tips Card -->
+    <div class="card card-sub" style="margin-top:20px;display:flex;gap:16px;">
+      <div style="font-size:24px;color:var(--accent-amber);flex-shrink:0;">
+        <i class="ph-fill ph-lightbulb"></i>
+      </div>
       <div>
-        <div class="tip-card__title">Lưu ý để có kết quả tốt nhất</div>
-        <ul>
-          <li>Nhập diện tích sử dụng thực tế (không tính khoảng lùi).</li>
-          <li>Giá trị có thể thay đổi tùy theo hướng nhà, hẻm, nội thất.</li>
+        <div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px;">Lưu ý từ chuyên gia định giá</div>
+        <ul style="padding-left:18px;font-size:12.5px;color:var(--text-muted);line-height:1.7;">
+          <li>Nhập diện tích đất/sàn sử dụng thực tế để có kết quả chính xác nhất.</li>
+          <li>Số tầng công trình sẽ tính toán thêm giá trị hoàn thiện xây dựng vào tài sản.</li>
+          <li>Các tuyến đường kim cương (Nguyễn Huệ, Đồng Khởi...) được áp dụng ma trận hệ số trung tâm.</li>
         </ul>
       </div>
     </div>
@@ -202,21 +286,23 @@
 
 {% block extra_js %}
 <script>
+// Prevent double submission & show loading
 document.getElementById('predictForm').addEventListener('submit', function() {
-  document.querySelector('.btn-text').style.display = 'none';
-  document.querySelector('.btn-loading').style.display = 'inline-flex';
-  document.getElementById('predictBtn').disabled = true;
+  const btn = document.getElementById('predictBtn');
+  btn.querySelector('.btn-text').style.display = 'none';
+  btn.querySelector('.btn-loading').style.display = 'inline-flex';
+  btn.disabled = true;
 });
 
+// Dynamic location dropdown
 const LOCATIONS = {{ locations | tojson if locations else '{}' }};
-
 const citySel   = document.getElementById('citySelect') || document.querySelector('[name="city"]');
 const wardSel   = document.getElementById('wardSelect') || document.querySelector('[name="ward"]');
 const savedWard = (wardSel && wardSel.dataset.selected) ? wardSel.dataset.selected.trim() : '';
 
 function loadWards(city, selected) {
   if (!wardSel) return;
-  wardSel.innerHTML = '<option value="">Chọn phường/xã</option>';
+  wardSel.innerHTML = '<option value="">-- Chọn Phường / Xã --</option>';
   const wards = (LOCATIONS && LOCATIONS[city]) ? LOCATIONS[city] : [];
   
   let found = false;
@@ -231,7 +317,6 @@ function loadWards(city, selected) {
     wardSel.appendChild(opt);
   });
 
-  // Nếu người dùng có giá trị cũ nhưng không còn tồn tại trong danh mục của thành phố đã chọn
   if (selected && !found) {
     const oldOpt = document.createElement('option');
     oldOpt.value = selected;

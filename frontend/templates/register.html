@@ -1,72 +1,118 @@
 {% extends "base.html" %}
-{% block title %}Đăng ký — HouseAI{% endblock %}
+{% block title %}Đăng ký tài khoản — HousePrice AI Platform{% endblock %}
 {% block body_class %}page-auth{% endblock %}
 
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-card">
-    <div class="auth-card__header">
-      <div style="font-size:32px;color:var(--accent);margin-bottom:16px"><i class="ph-fill ph-hexagon"></i></div>
-      <h1>Tạo tài khoản</h1>
-      <p>Bắt đầu dự đoán giá nhà hoàn toàn miễn phí</p>
+<div class="auth-page-wrapper">
+  <!-- Left Side: AI Hero Showcase -->
+  <div class="auth-hero-side">
+    <div class="brand-link">
+      <div class="brand-logo-icon">
+        <i class="ph-fill ph-sparkle"></i>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">House<span>Price AI</span></span>
+        <span class="brand-tag">Deep Learning Hub</span>
+      </div>
     </div>
 
-    <form class="auth-form" method="POST" action="/register">
-      <div class="form-row" style="gap:16px">
-        <div class="form-group">
-          <label for="fullname">Họ và tên</label>
-          <input type="text" id="fullname" name="fullname" placeholder="Nguyễn Văn A" required/>
+    <div class="auth-hero-content">
+      <div class="auth-hero-badge">
+        <i class="ph-fill ph-user-plus"></i> Khởi tạo tài khoản AI
+      </div>
+      <h1 class="auth-hero-title">
+        Tham gia cộng đồng định giá <span>Chính xác & Khách quan</span>
+      </h1>
+      <p class="auth-hero-desc">
+        Tạo tài khoản miễn phí để tiếp cận công nghệ học máy phân tích giá trị nhà ở, lưu trữ báo cáo định giá và theo dõi biến động thị trường theo thời gian thực.
+      </p>
+
+      <div class="auth-feature-list">
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-infinity"></i></div>
+          <span>Tra cứu & định giá không giới hạn số lượng bất động sản</span>
         </div>
-        <div class="form-group">
-          <label for="username">Tên đăng nhập</label>
-          <input type="text" id="username" name="username" placeholder="username123" required/>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-database"></i></div>
+          <span>Kho lưu trữ lịch sử cá nhân với phân tích chi tiết từng tài sản</span>
+        </div>
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon"><i class="ph-fill ph-printer"></i></div>
+          <span>Xuất báo cáo định giá chuyên nghiệp phục vụ giao dịch</span>
         </div>
       </div>
-      <div class="form-group">
-        <label for="email">Email</label>
-        <div class="input-wrap" style="position:relative">
-          <i class="ph ph-envelope-simple" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-          <input type="email" style="padding-left:40px" id="email" name="email" placeholder="example@email.com" required/>
+    </div>
+
+    <div style="font-size:12.5px;color:var(--text-dim);position:relative;z-index:2;">
+      &copy; 2026 HousePrice AI — Bản quyền thuộc về hệ thống định giá bất động sản.
+    </div>
+  </div>
+
+  <!-- Right Side: Dark Modern Register Form -->
+  <div class="auth-form-side">
+    <div class="auth-card-box">
+      <div class="auth-header">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(139,92,246,0.15);color:var(--accent-purple);display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;">
+          <i class="ph-fill ph-user-plus"></i>
         </div>
-      </div>
-      <div class="form-group">
-        <label for="password">Mật khẩu</label>
-        <div class="input-wrap" style="position:relative">
-          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-          <input type="password" style="padding-left:40px" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required/>
-          <button type="button" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3)" onclick="togglePw(this)"><i class="ph ph-eye"></i></button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="confirm_password">Xác nhận mật khẩu</label>
-        <div class="input-wrap" style="position:relative">
-          <i class="ph ph-lock-key" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-          <input type="password" style="padding-left:40px" id="confirm_password" name="confirm_password" placeholder="Nhập lại mật khẩu" required/>
-        </div>
+        <h2>Tạo tài khoản mới</h2>
+        <p>Bắt đầu định giá bất động sản hoàn toàn miễn phí</p>
       </div>
 
-      <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:16px">Đăng ký tài khoản</button>
-    </form>
+      <form method="POST" action="/register" class="auth-form">
+        <div class="form-row" style="gap:14px;">
+          <div class="form-group">
+            <label for="fullname">Họ và tên</label>
+            <div class="input-wrap">
+              <i class="ph ph-identification-card input-icon-left"></i>
+              <input type="text" id="fullname" name="fullname" placeholder="Nguyễn Văn A" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="username">Tên đăng nhập</label>
+            <div class="input-wrap">
+              <i class="ph ph-user input-icon-left"></i>
+              <input type="text" id="username" name="username" placeholder="username123" required/>
+            </div>
+          </div>
+        </div>
 
-    <div class="auth-card__footer">
-      Đã có tài khoản? <a href="/login">Đăng nhập</a>
+        <div class="form-group">
+          <label for="email">Địa chỉ Email</label>
+          <div class="input-wrap">
+            <i class="ph ph-envelope-simple input-icon-left"></i>
+            <input type="email" id="email" name="email" placeholder="example@email.com" required/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <div class="input-wrap">
+            <i class="ph ph-lock-key input-icon-left"></i>
+            <input type="password" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required/>
+            <button type="button" class="input-icon-right" onclick="togglePw(this)" title="Ẩn/Hiện mật khẩu">
+              <i class="ph ph-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Xác nhận mật khẩu</label>
+          <div class="input-wrap">
+            <i class="ph ph-lock-key-open input-icon-left"></i>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Nhập lại mật khẩu" required/>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--full btn--lg" style="margin-top:12px;">
+          <i class="ph-bold ph-check-circle"></i> Đăng ký tài khoản
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Đã có tài khoản thành viên? <a href="/login">Đăng nhập ngay</a>
+      </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function togglePw(btn) {
-  const inp = btn.previousElementSibling;
-  const icon = btn.querySelector('i');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    icon.classList.replace('ph-eye', 'ph-eye-slash');
-  } else {
-    inp.type = 'password';
-    icon.classList.replace('ph-eye-slash', 'ph-eye');
-  }
-}
-</script>
 {% endblock %}

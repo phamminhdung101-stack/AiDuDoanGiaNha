@@ -1,122 +1,107 @@
 {% extends "base.html" %}
-{% block title %}Quản lý dữ liệu nhà — HouseAI Admin{% endblock %}
+{% block title %}Quản lý dữ liệu nhà — HousePrice AI Admin{% endblock %}
+{% block page_title %}Quản lý Cơ sở Dữ liệu Nhà ở{% endblock %}
 {% block body_class %}page-admin{% endblock %}
 
 {% block content %}
-<div class="admin-layout">
-  <aside class="admin-sidebar">
-    <div class="sidebar-logo">
-      <i class="ph-fill ph-hexagon logo-icon"></i> HouseAI <span class="admin-badge">Admin</span>
+<div class="card" style="padding:0;overflow:hidden;">
+  <!-- TOOLBAR -->
+  <div class="table-toolbar">
+    <form method="GET" action="/admin/houses" style="display:flex;gap:12px;flex:1;flex-wrap:wrap;">
+      <div class="search-input-box">
+        <i class="ph ph-magnifying-glass"></i>
+        <input type="text" name="search" value="{{ search }}" placeholder="Tìm theo tiêu đề, thành phố, quận huyện, loại hình..."/>
+      </div>
+      <button type="submit" class="btn btn--primary btn--sm">
+        <i class="ph ph-funnel"></i> Tìm kiếm
+      </button>
+      {% if search %}
+        <a href="/admin/houses" class="btn btn--outline btn--sm">Hủy lọc</a>
+      {% endif %}
+    </form>
+
+    <div style="display:flex;gap:12px;">
+      <a href="/admin/houses/add" class="btn btn--cyan btn--sm">
+        <i class="ph-bold ph-plus"></i> Thêm dữ liệu nhà mới
+      </a>
     </div>
-    <nav class="sidebar-nav">
-      <a href="/admin/dashboard" class="sidebar-link"><i class="ph ph-squares-four"></i> Tổng quan</a>
-      <a href="/admin/houses" class="sidebar-link active"><i class="ph ph-house"></i> Dữ liệu nhà</a>
-      <a href="/admin/train" class="sidebar-link"><i class="ph ph-brain"></i> Huấn luyện AI</a>
-      <a href="/logout" class="sidebar-link sidebar-link--danger"><i class="ph ph-sign-out"></i> Đăng xuất</a>
-    </nav>
-  </aside>
+  </div>
 
-  <div class="admin-main">
-    <div class="admin-topbar">
-      <h1>Quản lý dữ liệu nhà</h1>
-      <a href="/admin/houses/add" class="btn btn--primary"><i class="ph ph-plus"></i> Thêm dữ liệu mới</a>
-    </div>
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th style="width:50px;">STT</th>
+          <th>Tiêu đề / Địa chỉ chi tiết</th>
+          <th>Thành phố</th>
+          <th>Diện tích</th>
+          <th>Phòng ngủ</th>
+          <th>Loại hình</th>
+          <th>Giá niêm yết</th>
+          <th>Ngày tạo</th>
+          <th style="text-align:right;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for house in houses %}
+        <tr>
+          <td class="td-num">{{ loop.index + (page - 1) * per_page }}</td>
+          <td class="td-addr">
+            <span class="addr-main">{{ house.title or 'Nhà ở' }}</span>
+            <span class="addr-sub">
+              {{ house.district or '' }}{% if house.district and house.street %}, {% endif %}{{ house.street or '' }}
+            </span>
+          </td>
+          <td>{{ house.city or '—' }}</td>
+          <td style="font-family:var(--font-mono);font-weight:600;">{{ house.area or '—' }} m²</td>
+          <td>{{ house.bedrooms or '—' }} PN</td>
+          <td><span class="tag-type">{{ house.house_type or 'Nhà ở' }}</span></td>
+          <td class="td-price">
+            {% if house.price %}
+              {% if house.price >= 1000000000 %}
+                {{ "%.2f"|format(house.price / 1000000000) }} Tỷ
+              {% elif house.price >= 1000000 %}
+                {{ "%.2f"|format(house.price / 1000000) }} Triệu
+              {% else %}
+                {{ "{:,.0f}".format(house.price) }} VNĐ
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="color:var(--text-dim);font-size:12.5px;font-family:var(--font-mono);">{{ house.created_at or '—' }}</td>
+          <td style="text-align:right;white-space:nowrap;">
+            <a href="/admin/houses/edit/{{ house.id }}" class="btn-icon" title="Chỉnh sửa">
+              <i class="ph-bold ph-pencil-simple"></i>
+            </a>
+            <a href="/admin/houses/delete/{{ house.id }}" class="btn-icon btn-icon--danger"
+               onclick="return confirm('Xác nhận xóa bản ghi dữ liệu này khỏi database?')" title="Xóa">
+              <i class="ph-bold ph-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="td-empty" style="text-align:center;padding:50px;color:var(--text-dim);">
+            Chưa có dữ liệu nhà trong cơ sở dữ liệu. 
+            <a href="/admin/houses/add" style="color:var(--accent-cyan);font-weight:600;margin-left:6px;">Thêm mới ngay</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    {% set total = total | default(0) %}
-    {% set per_page = per_page | default(10) %}
-    {% set page = page | default(1) %}
-    {% set search = search | default('') %}
-
-    <div class="admin-card" style="padding:0; overflow:hidden">
-      <div class="history-toolbar">
-        <form method="GET" action="/admin/houses" style="display:flex;gap:12px;width:100%">
-          <div class="input-wrap" style="flex:1">
-            <i class="ph ph-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3)"></i>
-            <input class="search-input" style="padding-left:36px;width:100%" type="text" name="search" value="{{ search }}" placeholder="Tìm theo địa chỉ, loại hình..."/>
-          </div>
-          <button type="submit" class="btn btn--primary">Lọc</button>
-          {% if search %}
-            <a href="/admin/houses" class="btn btn--ghost">Xóa lọc</a>
-          {% endif %}
-        </form>
-      </div>
-
-      <div class="table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>STT</th>
-              <th>Tiêu đề / Địa chỉ</th>
-              <th>Thành phố</th>
-              <th>Diện tích</th>
-              <th>Phòng ngủ</th>
-              <th>Loại hình</th>
-              <th>Giá</th>
-              <th>Ngày thêm</th>
-              <th style="text-align:right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for house in houses %}
-            <tr>
-              <td class="td-num">{{ loop.index + (page - 1) * per_page }}</td>
-              <td class="td-addr">
-                <span class="addr-main">{{ house.title or '—' }}</span>
-                <span class="addr-sub">{{ house.district or '' }}{% if house.district and house.street %}, {% endif %}{{ house.street or '' }}</span>
-              </td>
-              <td>{{ house.city or '—' }}</td>
-              <td>{{ house.area or '—' }} m²</td>
-              <td>{{ house.bedrooms or '—' }}</td>
-              <td><span class="tag-type">{{ house.house_type or '—' }}</span></td>
-              <td class="td-price">
-                {% if house.price %}
-                  {% if house.price >= 1000000 %}
-                    {{ "%.2f"|format(house.price / 1000000) }} tỷ
-                  {% elif house.price >= 1000 %}
-                    {{ "%.0f"|format(house.price / 1000) }} triệu
-                  {% else %}
-                    {{ house.price }}
-                  {% endif %}
-                {% else %}—{% endif %}
-              </td>
-              <td class="td-date">{{ house.created_at or '—' }}</td>
-              <td style="text-align:right;white-space:nowrap">
-                <a href="/admin/houses/edit/{{ house.id }}" class="btn-icon" title="Sửa"><i class="ph ph-pencil-simple"></i></a>
-                <a href="/admin/houses/delete/{{ house.id }}" class="btn-icon btn-icon--danger" onclick="return confirm('Xác nhận xóa dữ liệu này?')" title="Xóa"><i class="ph ph-trash"></i></a>
-              </td>
-            </tr>
-            {% else %}
-            <tr>
-              <td colspan="9" class="td-empty">
-                Chưa có dữ liệu nhà. <a href="/admin/houses/add" style="color:var(--accent);font-weight:600">Thêm ngay</a>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="table-footer">
-        <span>Hiển thị <strong>{{ houses|length }}</strong> / <strong>{{ total }}</strong> bản ghi</span>
-        {% set total_pages = (total // per_page) + (1 if total % per_page > 0 else 0) %}
-        {% if total > per_page %}
-        <div class="pagination">
-          {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&search={{ search }}"><i class="ph ph-caret-left"></i></a>
-          {% endif %}
-          {% for p in range(1, total_pages + 1) %}
-            {% if p == page %}
-              <span class="active">{{ p }}</span>
-            {% else %}
-              <a href="?page={{ p }}&search={{ search }}">{{ p }}</a>
-            {% endif %}
-          {% endfor %}
-          {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}&search={{ search }}"><i class="ph ph-caret-right"></i></a>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
+  <!-- FOOTER & PAGINATION -->
+  <div class="table-footer">
+    <span>Hiển thị <strong>{{ houses|length }}</strong> / <strong>{{ total }}</strong> bản ghi</span>
+    <div style="display:flex;gap:8px;">
+      {% if page > 1 %}
+        <a href="/admin/houses?page={{ page - 1 }}&search={{ search }}" class="btn btn--outline btn--sm">&laquo; Trang trước</a>
+      {% endif %}
+      <span style="display:inline-flex;align-items:center;padding:0 12px;font-family:var(--font-mono);font-size:13px;color:var(--accent-cyan);">Trang {{ page }}</span>
+      {% if (page * per_page) < total %}
+        <a href="/admin/houses?page={{ page + 1 }}&search={{ search }}" class="btn btn--outline btn--sm">Trang sau &raquo;</a>
+      {% endif %}
     </div>
   </div>
 </div>
