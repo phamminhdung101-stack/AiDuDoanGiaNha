@@ -128,15 +128,15 @@ def _raw_predict(bundle: dict, area: float, location: str, ward: str,
     return max(price, 0.0)
 
 
-def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]]] | None = None) -> dict[str, Any]:
+def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]]] | None = None, allow_unknown_ward: bool = False) -> dict[str, Any]:
     """
     Dự đoán giá nhà và kiểm tra tính hợp lệ dữ liệu chặt chẽ ở backend.
     - Thành phố phải tồn tại trong danh mục của mô hình.
-    - Phường/xã phải thuộc đúng thành phố đã chọn.
+    - Phường/xã phải thuộc đúng thành phố đã chọn (hoặc chấp nhận rỗng nếu allow_unknown_ward=True).
     - Xác thực tên đường theo danh mục đáng tin cậy nếu có; nếu không có thì ghi nhận chưa xác thực, không chặn tùy tiện.
     - Diện tích phải > 0.
     
-    Trả về dict: price, min_price, max_price, confidence, algorithm, city, ward, street, street_validation.
+    Trả về dict: price, min_price, max_price, confidence, algorithm, city, ward, is_city_level, street, street_validation.
     Đơn vị: VNĐ.
     """
     bundle = load_model()
@@ -147,7 +147,7 @@ def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]
     # 2. Kiểm tra tính hợp lệ của Thành phố và Phường/Xã
     city_raw = form_data.get("city", "")
     ward_raw = form_data.get("ward", "")
-    norm_city, norm_ward = validate_location(city_raw, ward_raw, catalog)
+    norm_city, norm_ward = validate_location(city_raw, ward_raw, catalog, allow_unknown_ward=allow_unknown_ward)
 
     # 3. Kiểm tra tính hợp lệ của các thông số kỹ thuật
     try:
@@ -192,8 +192,12 @@ def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]
     # 5. Thực hiện dự đoán giá
     price = _raw_predict(bundle, area, norm_city, norm_ward, rooms, toilets, floors=floors, street=form_data.get("street", ""))
 
+    is_city_level = (norm_ward == "")
+
     # 6. Biên độ dao động
-    if area > 0 and rooms > 0 and norm_ward != "unknown":
+    if is_city_level:
+        margin = 0.22
+    elif area > 0 and rooms > 0 and norm_ward != "unknown":
         margin = 0.12
     elif area > 0 and rooms > 0:
         margin = 0.16
@@ -229,7 +233,8 @@ def predict_price(form_data: dict, street_catalog: dict[str, dict[str, list[str]
         "confidence":        accuracy,
         "algorithm":         algo_display,
         "city":              norm_city,
-        "ward":              norm_ward,
+        "ward":              norm_ward if norm_ward else "Toàn thành phố (Mặt bằng chung)",
+        "is_city_level":     is_city_level,
         "street":            street_res.get("street", ""),
         "street_validation": street_res,
     }

@@ -32,8 +32,9 @@ VIETNAMESE_ACCENT_MAP = {
     "uỳ": "ùy", "uý": "úy", "uỷ": "ủy", "uỹ": "ũy", "uỵ": "ụy",
 }
 
-# ── Bản đồ chuẩn hóa tên Thành phố phổ biến (bí danh -> tên chuẩn) ───────────
+# ── Bản đồ chuẩn hóa tên Thành phố & Địa phương (bí danh -> tên chuẩn) ───────────
 CITY_CANONICAL_MAP = {
+    # 1. TP. Hồ Chí Minh & Bí danh
     "hồ chí minh": "Tp Hồ Chí Minh",
     "tp hồ chí minh": "Tp Hồ Chí Minh",
     "tp. hồ chí minh": "Tp Hồ Chí Minh",
@@ -41,23 +42,330 @@ CITY_CANONICAL_MAP = {
     "tp hcm": "Tp Hồ Chí Minh",
     "thành phố hồ chí minh": "Tp Hồ Chí Minh",
     "tphcm": "Tp Hồ Chí Minh",
+    "sài gòn": "Tp Hồ Chí Minh",
+    "saigon": "Tp Hồ Chí Minh",
+    "hcm": "Tp Hồ Chí Minh",
+
+    # 2. Hà Nội
     "hà nội": "Hà Nội",
     "tp hà nội": "Hà Nội",
     "tp. hà nội": "Hà Nội",
     "thành phố hà nội": "Hà Nội",
+    "hn": "Hà Nội",
+    "thủ đô": "Hà Nội",
+    "thủ đô hà nội": "Hà Nội",
+
+    # 3. Đà Nẵng
     "đà nẵng": "Đà Nẵng",
     "tp đà nẵng": "Đà Nẵng",
     "tp. đà nẵng": "Đà Nẵng",
     "thành phố đà nẵng": "Đà Nẵng",
+    "danang": "Đà Nẵng",
+
+    # 4. Bà Rịa - Vũng Tàu
+    "bà rịa - vũng tàu": "Bà Rịa - Vũng Tàu",
+    "bà rịa vũng tàu": "Bà Rịa - Vũng Tàu",
+    "vũng tàu": "Bà Rịa - Vũng Tàu",
+    "tp vũng tàu": "Bà Rịa - Vũng Tàu",
+    "tp. vũng tàu": "Bà Rịa - Vũng Tàu",
+    "thành phố vũng tàu": "Bà Rịa - Vũng Tàu",
+    "bà rịa": "Bà Rịa - Vũng Tàu",
+    "tp bà rịa": "Bà Rịa - Vũng Tàu",
+    "thành phố bà rịa": "Bà Rịa - Vũng Tàu",
+    "brvt": "Bà Rịa - Vũng Tàu",
+    "br-vt": "Bà Rịa - Vũng Tàu",
+
+    # 5. Bình Dương
+    "bình dương": "Bình Dương",
+    "tỉnh bình dương": "Bình Dương",
+    "thủ dầu một": "Bình Dương",
+    "dĩ an": "Bình Dương",
+    "thuận an": "Bình Dương",
+    "bến cát": "Bình Dương",
+    "tân uyên": "Bình Dương",
+
+    # 6. Đồng Nai
+    "đồng nai": "Đồng Nai",
+    "tỉnh đồng nai": "Đồng Nai",
+    "biên hòa": "Đồng Nai",
+    "tp biên hòa": "Đồng Nai",
+    "long thành": "Đồng Nai",
+    "nhơn trạch": "Đồng Nai",
+
+    # 7. Cần Thơ
     "cần thơ": "Cần Thơ",
     "tp cần thơ": "Cần Thơ",
     "tp. cần thơ": "Cần Thơ",
     "thành phố cần thơ": "Cần Thơ",
-    "bình dương": "Bình Dương",
-    "tỉnh bình dương": "Bình Dương",
+
+    # 8. Hải Phòng
     "hải phòng": "Hải Phòng",
     "tp hải phòng": "Hải Phòng",
     "thành phố hải phòng": "Hải Phòng",
+
+    # 9. Khánh Hòa
+    "khánh hòa": "Khánh Hòa",
+    "nha trang": "Khánh Hòa",
+    "tp nha trang": "Khánh Hòa",
+    "thành phố nha trang": "Khánh Hòa",
+    "cam ranh": "Khánh Hòa",
+
+    # 10. Lâm Đồng
+    "lâm đồng": "Lâm Đồng",
+    "đà lạt": "Lâm Đồng",
+    "tp đà lạt": "Lâm Đồng",
+    "thành phố đà lạt": "Lâm Đồng",
+    "bảo lộc": "Lâm Đồng",
+
+    # 11. Quảng Ninh
+    "quảng ninh": "Quảng Ninh",
+    "hạ long": "Quảng Ninh",
+    "tp hạ long": "Quảng Ninh",
+    "cẩm phả": "Quảng Ninh",
+    "uông bí": "Quảng Ninh",
+    "móng cái": "Quảng Ninh",
+
+    # 12. Thừa Thiên Huế
+    "thừa thiên huế": "Thừa Thiên Huế",
+    "huế": "Thừa Thiên Huế",
+    "tp huế": "Thừa Thiên Huế",
+    "thành phố huế": "Thừa Thiên Huế",
+
+    # 13. Đắk Lắk
+    "đắk lắk": "Đắk Lắk",
+    "dak lak": "Đắk Lắk",
+    "buôn ma thuột": "Đắk Lắk",
+    "tp buôn ma thuột": "Đắk Lắk",
+
+    # 14. Bình Định
+    "bình định": "Bình Định",
+    "quy nhơn": "Bình Định",
+    "tp quy nhơn": "Bình Định",
+
+    # 15. Kiên Giang
+    "kiên giang": "Kiên Giang",
+    "phú quốc": "Kiên Giang",
+    "thành phố phú quốc": "Kiên Giang",
+    "rạch giá": "Kiên Giang",
+    "hà tiên": "Kiên Giang",
+
+    # 16. Bình Thuận
+    "bình thuận": "Bình Thuận",
+    "phan thiết": "Bình Thuận",
+    "mũi né": "Bình Thuận",
+
+    # 17. Thanh Hóa
+    "thanh hóa": "Thanh Hóa",
+    "tp thanh hóa": "Thanh Hóa",
+    "sầm sơn": "Thanh Hóa",
+
+    # 18. Nghệ An
+    "nghệ an": "Nghệ An",
+    "vinh": "Nghệ An",
+    "tp vinh": "Nghệ An",
+    "cửa lò": "Nghệ An",
+
+    # 19. Bắc Ninh
+    "bắc ninh": "Bắc Ninh",
+    "tp bắc ninh": "Bắc Ninh",
+    "từ sơn": "Bắc Ninh",
+
+    # 20. Hải Dương
+    "hải dương": "Hải Dương",
+    "tp hải dương": "Hải Dương",
+
+    # 21. Hưng Yên
+    "hưng yên": "Hưng Yên",
+    "tp hưng yên": "Hưng Yên",
+
+    # 22. Thái Nguyên
+    "thái nguyên": "Thái Nguyên",
+    "tp thái nguyên": "Thái Nguyên",
+
+    # 23. Long An
+    "long an": "Long An",
+    "tân an": "Long An",
+
+    # 24. Tiền Giang
+    "tiền giang": "Tiền Giang",
+    "mỹ tho": "Tiền Giang",
+
+    # 25. Bến Tre
+    "bến tre": "Bến Tre",
+    "tp bến tre": "Bến Tre",
+
+    # 26. Vĩnh Long
+    "vĩnh long": "Vĩnh Long",
+
+    # 27. Trà Vinh
+    "trà vinh": "Trà Vinh",
+
+    # 28. Hậu Giang
+    "hậu giang": "Hậu Giang",
+    "vị thanh": "Hậu Giang",
+
+    # 29. Sóc Trăng
+    "sóc trăng": "Sóc Trăng",
+
+    # 30. Bạc Liêu
+    "bạc liêu": "Bạc Liêu",
+
+    # 31. Cà Mau
+    "cà mau": "Cà Mau",
+
+    # 32. An Giang
+    "an giang": "An Giang",
+    "long xuyên": "An Giang",
+    "châu đốc": "An Giang",
+
+    # 33. Đồng Tháp
+    "đồng tháp": "Đồng Tháp",
+    "cao lãnh": "Đồng Tháp",
+    "sa đéc": "Đồng Tháp",
+
+    # 34. Tây Ninh
+    "tây ninh": "Tây Ninh",
+
+    # 35. Bình Phước
+    "bình phước": "Bình Phước",
+    "đồng xoài": "Bình Phước",
+
+    # 36. Ninh Thuận
+    "ninh thuận": "Ninh Thuận",
+    "phan rang": "Ninh Thuận",
+
+    # 37. Phú Yên
+    "phú yên": "Phú Yên",
+    "tuy hòa": "Phú Yên",
+
+    # 38. Quảng Nam
+    "quảng nam": "Quảng Nam",
+    "hội an": "Quảng Nam",
+    "tam kỳ": "Quảng Nam",
+
+    # 39. Quảng Ngãi
+    "quảng ngãi": "Quảng Ngãi",
+
+    # 40. Quảng Trị
+    "quảng trị": "Quảng Trị",
+    "đông hà": "Quảng Trị",
+
+    # 41. Hà Nam
+    "hà nam": "Hà Nam",
+    "phủ lý": "Hà Nam",
+
+    # 42. Nam Định
+    "nam định": "Nam Định",
+
+    # 43. Thái Bình
+    "thái bình": "Thái Bình",
+
+    # 44. Bắc Giang
+    "bắc giang": "Bắc Giang",
+
+    # 45. Phú Thọ
+    "phú thọ": "Phú Thọ",
+    "việt trì": "Phú Thọ",
+
+    # 46. Lào Cai
+    "lào cai": "Lào Cai",
+    "sa pa": "Lào Cai",
+    "sapa": "Lào Cai",
+
+    # 47. Yên Bái
+    "yên bái": "Yên Bái",
+
+    # 48. Hòa Bình
+    "hòa bình": "Hòa Bình",
+
+    # 49. Ninh Bình
+    "ninh bình": "Ninh Bình",
+
+    # 50. Kon Tum
+    "kon tum": "Kon Tum",
+
+    # 51. Gia Lai
+    "gia lai": "Gia Lai",
+    "pleiku": "Gia Lai",
+
+    # 52. Đắk Nông
+    "đắk nông": "Đắk Nông",
+    "gia nghĩa": "Đắk Nông",
+
+    # Các tỉnh thuộc Việt Nam nằm ngoài danh mục huấn luyện 52 tỉnh:
+    "điện biên": "Điện Biên",
+    "điện biên phủ": "Điện Biên",
+    "sơn la": "Sơn La",
+    "lai châu": "Lai Châu",
+    "hà giang": "Hà Giang",
+    "cao bằng": "Cao Bằng",
+    "bắc kạn": "Bắc Kạn",
+    "tuyên quang": "Tuyên Quang",
+    "lạng sơn": "Lạng Sơn",
+    "vĩnh phúc": "Vĩnh Phúc",
+    "vĩnh yên": "Vĩnh Phúc",
+    "quảng bình": "Quảng Bình",
+    "đồng hới": "Quảng Bình",
+    "hà tĩnh": "Hà Tĩnh",
+}
+
+# Danh mục 63 tỉnh/thành phố chính thức của Việt Nam để xác định địa danh hợp lệ
+ALL_VIETNAMESE_PROVINCES = {
+    "An Giang", "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu", "Bắc Ninh",
+    "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước", "Bình Thuận", "Cà Mau",
+    "Cần Thơ", "Cao Bằng", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai",
+    "Đồng Tháp", "Gia Lai", "Hà Giang", "Hà Nam", "Hà Nội", "Hà Tĩnh", "Hải Dương",
+    "Hải Phòng", "Hậu Giang", "Hòa Bình", "Hưng Yên", "Khánh Hòa", "Kiên Giang",
+    "Kon Tum", "Lai Châu", "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định",
+    "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình",
+    "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La",
+    "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang",
+    "Tp Hồ Chí Minh", "Trà Vinh", "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái"
+}
+
+# Bản đồ ánh xạ Quận/Huyện đặc trưng về Thành phố trực thuộc
+DISTRICT_TO_CITY_MAP = {
+    # TP. Hồ Chí Minh
+    "quận 1": "Tp Hồ Chí Minh", "quận 2": "Tp Hồ Chí Minh", "quận 3": "Tp Hồ Chí Minh",
+    "quận 4": "Tp Hồ Chí Minh", "quận 5": "Tp Hồ Chí Minh", "quận 6": "Tp Hồ Chí Minh",
+    "quận 7": "Tp Hồ Chí Minh", "quận 8": "Tp Hồ Chí Minh", "quận 9": "Tp Hồ Chí Minh",
+    "quận 10": "Tp Hồ Chí Minh", "quận 11": "Tp Hồ Chí Minh", "quận 12": "Tp Hồ Chí Minh",
+    "thành phố thủ đức": "Tp Hồ Chí Minh", "thủ đức": "Tp Hồ Chí Minh",
+    "bình thạnh": "Tp Hồ Chí Minh", "quận bình thạnh": "Tp Hồ Chí Minh",
+    "gò vấp": "Tp Hồ Chí Minh", "quận gò vấp": "Tp Hồ Chí Minh",
+    "tân bình": "Tp Hồ Chí Minh", "quận tân bình": "Tp Hồ Chí Minh",
+    "tân phú": "Tp Hồ Chí Minh", "quận tân phú": "Tp Hồ Chí Minh",
+    "phú nhuận": "Tp Hồ Chí Minh", "quận phú nhuận": "Tp Hồ Chí Minh",
+    "bình tân": "Tp Hồ Chí Minh", "quận bình tân": "Tp Hồ Chí Minh",
+    "huyện bình chánh": "Tp Hồ Chí Minh", "bình chánh": "Tp Hồ Chí Minh",
+    "huyện nhà bè": "Tp Hồ Chí Minh", "nhà bè": "Tp Hồ Chí Minh",
+    "huyện hóc môn": "Tp Hồ Chí Minh", "hóc môn": "Tp Hồ Chí Minh",
+    "huyện củ chi": "Tp Hồ Chí Minh", "củ chi": "Tp Hồ Chí Minh",
+    "huyện cần giờ": "Tp Hồ Chí Minh", "cần giờ": "Tp Hồ Chí Minh",
+
+    # Hà Nội
+    "ba đình": "Hà Nội", "quận ba đình": "Hà Nội",
+    "hoàn kiếm": "Hà Nội", "quận hoàn kiếm": "Hà Nội",
+    "tây hồ": "Hà Nội", "quận tây hồ": "Hà Nội",
+    "long biên": "Hà Nội", "quận long biên": "Hà Nội",
+    "cầu giấy": "Hà Nội", "quận cầu giấy": "Hà Nội",
+    "đống đa": "Hà Nội", "quận đống đa": "Hà Nội",
+    "hai bà trưng": "Hà Nội", "quận hai bà trưng": "Hà Nội",
+    "hoàng mai": "Hà Nội", "quận hoàng mai": "Hà Nội",
+    "thanh xuân": "Hà Nội", "quận thanh xuân": "Hà Nội",
+    "hà đông": "Hà Nội", "quận hà đông": "Hà Nội",
+    "bắc từ liêm": "Hà Nội", "quận bắc từ liêm": "Hà Nội",
+    "nam từ liêm": "Hà Nội", "quận nam từ liêm": "Hà Nội",
+    "thanh trì": "Hà Nội", "gia lâm": "Hà Nội", "đông anh": "Hà Nội", "sóc sơn": "Hà Nội",
+
+    # Đà Nẵng
+    "hải châu": "Đà Nẵng", "quận hải châu": "Đà Nẵng",
+    "sơn trà": "Đà Nẵng", "quận sơn trà": "Đà Nẵng",
+    "ngũ hành sơn": "Đà Nẵng", "quận ngũ hành sơn": "Đà Nẵng",
+    "thanh khê": "Đà Nẵng", "quận thanh khê": "Đà Nẵng",
+    "liên chiểu": "Đà Nẵng", "quận liên chiểu": "Đà Nẵng",
+    "cẩm lệ": "Đà Nẵng", "quận cẩm lệ": "Đà Nẵng",
+    "hòa vang": "Đà Nẵng", "huyện hòa vang": "Đà Nẵng",
 }
 
 INVALID_TOKENS = {
@@ -239,11 +547,12 @@ def get_active_location_catalog(force_reload: bool = False) -> dict[str, list[st
 
 # ── Kiểm tra tính hợp lệ khi dự đoán ─────────────────────────────────────────
 
-def validate_location(city: Any, ward: Any, catalog: dict[str, list[str]]) -> tuple[str, str]:
+def validate_location(city: Any, ward: Any, catalog: dict[str, list[str]], allow_unknown_ward: bool = False) -> tuple[str, str]:
     """
     Kiểm tra tính hợp lệ của thành phố và phường/xã dựa trên danh mục địa điểm của mô hình.
     Trả về (normalized_city, normalized_ward) nếu hợp lệ.
     Ném ValueError với thông báo tiếng Việt rõ ràng nếu không hợp lệ.
+    Nếu allow_unknown_ward=True: cho phép phường/xã rỗng để định giá theo baseline của thành phố.
     """
     if not catalog:
         raise ValueError(
@@ -263,7 +572,7 @@ def validate_location(city: Any, ward: Any, catalog: dict[str, list[str]]) -> tu
             break
 
     if not matched_city:
-        valid_cities = ", ".join(f"'{c}'" for c in catalog.keys())
+        valid_cities = ", ".join(f"'{c}'" for c in sorted(catalog.keys()))
         raise ValueError(
             f"Thành phố '{city}' không tồn tại trong danh mục của mô hình. "
             f"Các thành phố hợp lệ: {valid_cities}."
@@ -271,6 +580,8 @@ def validate_location(city: Any, ward: Any, catalog: dict[str, list[str]]) -> tu
 
     norm_ward = normalize_ward(ward)
     if not norm_ward:
+        if allow_unknown_ward:
+            return matched_city, ""
         raise ValueError(f"Vui lòng chọn Phường / Xã thuộc {matched_city}.")
 
     wards_in_city = catalog[matched_city]
@@ -283,6 +594,10 @@ def validate_location(city: Any, ward: Any, catalog: dict[str, list[str]]) -> tu
             break
 
     if not matched_ward:
+        if allow_unknown_ward:
+            # Nếu người dùng nhập tên phường không có trong danh mục, cho phép fallback về mức chung thành phố
+            return matched_city, ""
+
         # Kiểm tra xem phường này có thuộc thành phố khác trong danh mục hay không
         other_cities = [
             c for c, w_list in catalog.items()

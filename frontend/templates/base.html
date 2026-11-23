@@ -86,6 +86,11 @@
             <span>Bản đồ giá BĐS</span>
             <span class="nav-badge" style="background:var(--accent-cyan);color:#080D1A;font-weight:800;">Maps</span>
           </a>
+          <a href="/chat" class="nav-item {% if request.path == '/chat' %}active{% endif %}">
+            <i class="ph-bold ph-chats-circle"></i>
+            <span>Trợ lý AI Tư vấn</span>
+            <span class="nav-badge" style="background:var(--gradient-primary);color:#fff;font-weight:800;">AI</span>
+          </a>
           <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}">
             <i class="ph ph-clock-counter-clockwise"></i>
             <span>Lịch sử định giá</span>
@@ -193,6 +198,7 @@
         <a href="/predict" style="color:var(--text-muted)">Dự đoán</a>
         <a href="/compare" style="color:var(--text-muted)">So sánh giá</a>
         <a href="/map" style="color:var(--text-muted)">Bản đồ BĐS</a>
+        <a href="/chat" style="color:var(--text-muted)">Trợ lý AI</a>
         <a href="/history" style="color:var(--text-muted)">Lịch sử</a>
       </div>
     </footer>
@@ -204,6 +210,61 @@
   {% block auth_content %}
     {{ self.content() }}
   {% endblock %}
+{% endif %}
+
+{% if request.path != '/chat' %}
+<!-- Nút Nổi Mở Nhanh Chatbot AI Tư Vấn Bất Động Sản -->
+<a href="/chat" class="floating-ai-chat-btn" title="Hỏi Trợ lý AI Tư vấn Bất động sản">
+  <div class="floating-chat-icon"><i class="ph-fill ph-robot"></i></div>
+  <span class="floating-chat-text">Trợ lý AI</span>
+  <span class="floating-chat-pulse"></span>
+</a>
+<style>
+.floating-ai-chat-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 999;
+  background: var(--gradient-primary);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.45);
+  transition: all 0.25s ease;
+}
+.floating-ai-chat-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.6);
+  color: #fff;
+}
+.floating-chat-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+.floating-chat-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: pulseDot 1.5s infinite;
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+@media (max-width: 600px) {
+  .floating-chat-text { display: none; }
+  .floating-ai-chat-btn { padding: 12px; }
+}
+</style>
 {% endif %}
 
 <!-- Javascript Core -->

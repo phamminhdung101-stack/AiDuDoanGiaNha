@@ -1,11 +1,13 @@
+import os
 import mysql.connector
 from contextlib import contextmanager
 
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "",
-    "database": "house_prediction",
+    "host": os.environ.get("DB_HOST", "localhost"),
+    "user": os.environ.get("DB_USER", "root"),
+    "password": os.environ.get("DB_PASSWORD", ""),
+    "database": os.environ.get("DB_NAME", "house_prediction"),
+    "port": int(os.environ.get("DB_PORT", 3306)),
     "charset": "utf8mb4",
 }
 
@@ -99,7 +101,43 @@ def init_db():
             max_price   FLOAT,
             confidence  FLOAT,
             created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id           INT AUTO_INCREMENT PRIMARY KEY,
+            user_id      INT NOT NULL,
+            session_name VARCHAR(256) NOT NULL DEFAULT 'Cuộc trò chuyện mới',
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            session_id  INT NOT NULL,
+            role        VARCHAR(16) NOT NULL,
+            message     TEXT NOT NULL,
+            metadata    TEXT NULL,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_feedback (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            message_id  INT NOT NULL,
+            user_id     INT NOT NULL,
+            rating      INT NOT NULL,
+            comment     TEXT NULL,
+            created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
 
